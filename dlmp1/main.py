@@ -64,7 +64,7 @@ class TrainConfig(NamedTuple):
     verbose_scheduler: bool = False
 
 
-def perform(*, model_name: str, config: TrainConfig = None, resume: bool = False):
+def perform(*, model: nn.Module = None, model_name: str = None, config: TrainConfig = None, resume: bool = False):
     config = config or TrainConfig()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_acc = 0  # best test accuracy
@@ -98,10 +98,13 @@ def perform(*, model_name: str, config: TrainConfig = None, resume: bool = False
                'dog', 'frog', 'horse', 'ship', 'truck')
 
     # Model
-
-    print('==> Building model', model_name, "on", device)
-    net_factory = MODEL_FACTORIES[model_name]
-    net = net_factory()
+    if model_name:
+        assert model is None, f"must provide exactly one of {model, model_name}"
+        print('==> Building model', model_name, "on", device)
+        net_factory = MODEL_FACTORIES[model_name]
+        net = net_factory()
+    else:
+        net = model
     net = net.to(device)
     if device == 'cuda':
         net = torch.nn.DataParallel(net)
