@@ -16,6 +16,7 @@ import torchvision.transforms as transforms
 import os
 import argparse
 
+from tqdm import tqdm
 from dlmp1.models.resnet import ResNet18
 
 
@@ -107,13 +108,13 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
         print(message)
 
     # Training
-    def train(epoch):
-        print('\nEpoch: %d' % epoch)
+    def train():
         net.train()
         train_loss = 0
         correct = 0
         total = 0
-        for batch_idx, (inputs, targets) in enumerate(trainloader):
+        mean_train_loss = 0
+        for batch_idx, (inputs, targets) in tqdm(enumerate(trainloader), total=len(trainloader)):
             inputs: Tensor
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
@@ -126,8 +127,8 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
             _, predicted = outputs.max(1)
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
-
-            _report_progress('Train Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            mean_train_loss = train_loss/(batch_idx+1)
+        _report_progress('Train Loss: %.3f | Acc: %.3f%% (%d/%d)' % (mean_train_loss, 100.*correct/total, correct, total))
 
 
     def test(epoch):
@@ -136,6 +137,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
         test_loss = 0
         correct = 0
         total = 0
+        mean_test_loss = 0
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(testloader):
                 inputs: Tensor
@@ -147,8 +149,8 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
                 _, predicted = outputs.max(1)
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
-
-                _report_progress(' Test Loss: %.3f | Acc: %.3f%% (%d/%d)' % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                mean_test_loss = test_loss/(batch_idx+1)
+        _report_progress(' Test Loss: %.3f | Acc: %.3f%% (%d/%d)' % (mean_test_loss, 100.*correct/total, correct, total))
 
         # Save checkpoint.
         acc = 100.*correct/total
@@ -167,7 +169,8 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
 
 
     for epoch_ in range(start_epoch, start_epoch + epoch_count):
-        train(epoch_)
+        print(f'\nEpoch: {epoch_+1}/{epoch_count}')
+        train()
         test(epoch_)
         scheduler.step()
 
