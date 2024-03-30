@@ -17,7 +17,7 @@ import os
 import argparse
 
 from dlmp1.models.resnet import ResNet18
-from dlmp1.utils import progress_bar
+from dlmp1.utils import ProgressBar
 
 
 MODEL_FACTORIES = {
@@ -104,7 +104,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
     optimizer = optim.SGD(net.parameters(), lr=learning_rate,
                           momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
-
+    progress_bar = ProgressBar()
 
     # Training
     def train(epoch):
@@ -127,7 +127,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+            progress_bar.update(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                          % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 
@@ -149,7 +149,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
 
-                progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                progress_bar.update(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                              % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
         # Save checkpoint.

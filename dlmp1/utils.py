@@ -43,54 +43,62 @@ def init_params(net):
                 init.constant(m.bias, 0)
 
 
-_, term_width = os.popen('stty size', 'r').read().split()
-term_width = int(term_width)
+class ProgressBar:
 
-TOTAL_BAR_LENGTH = 65.
-last_time = time.time()
-begin_time = last_time
-def progress_bar(current, total, msg=None):
-    global last_time, begin_time
-    if current == 0:
-        begin_time = time.time()  # Reset for new bar.
+    def __init__(self):
+        try:
+            with os.popen('stty size', 'r') as p:
+                term_width = p.read().split()[-1]
+        except Exception as e:
+            print("terminal width could not be determined due to", type(e).__name__, e, file=sys.stderr)
+            term_width = 80
+        self.term_width = int(term_width)
 
-    cur_len = int(TOTAL_BAR_LENGTH*current/total)
-    rest_len = int(TOTAL_BAR_LENGTH - cur_len) - 1
+        self.TOTAL_BAR_LENGTH = 65.
+        self.last_time = time.time()
+        self.begin_time = self.last_time
+    def update(self, current, total, msg=None):
+        if current == 0:
+            self.begin_time = time.time()  # Reset for new bar.
 
-    sys.stdout.write(' [')
-    for i in range(cur_len):
-        sys.stdout.write('=')
-    sys.stdout.write('>')
-    for i in range(rest_len):
-        sys.stdout.write('.')
-    sys.stdout.write(']')
+        cur_len = int(self.TOTAL_BAR_LENGTH*current/total)
+        rest_len = int(self.TOTAL_BAR_LENGTH - cur_len) - 1
 
-    cur_time = time.time()
-    step_time = cur_time - last_time
-    last_time = cur_time
-    tot_time = cur_time - begin_time
+        sys.stdout.write(' [')
+        for i in range(cur_len):
+            sys.stdout.write('=')
+        sys.stdout.write('>')
+        for i in range(rest_len):
+            sys.stdout.write('.')
+        sys.stdout.write(']')
 
-    L = []
-    L.append('  Step: %s' % format_time(step_time))
-    L.append(' | Tot: %s' % format_time(tot_time))
-    if msg:
-        L.append(' | ' + msg)
+        cur_time = time.time()
+        step_time = cur_time - self.last_time
+        self.last_time = cur_time
+        tot_time = cur_time - self.begin_time
 
-    msg = ''.join(L)
-    sys.stdout.write(msg)
-    for i in range(term_width-int(TOTAL_BAR_LENGTH)-len(msg)-3):
-        sys.stdout.write(' ')
+        L = []
+        L.append('  Step: %s' % format_time(step_time))
+        L.append(' | Tot: %s' % format_time(tot_time))
+        if msg:
+            L.append(' | ' + msg)
 
-    # Go back to the center of the bar.
-    for i in range(term_width-int(TOTAL_BAR_LENGTH/2)+2):
-        sys.stdout.write('\b')
-    sys.stdout.write(' %d/%d ' % (current+1, total))
+        msg = ''.join(L)
+        sys.stdout.write(msg)
+        for i in range(self.term_width-int(self.TOTAL_BAR_LENGTH)-len(msg)-3):
+            sys.stdout.write(' ')
 
-    if current < total-1:
-        sys.stdout.write('\r')
-    else:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
+        # Go back to the center of the bar.
+        for i in range(self.term_width-int(self.TOTAL_BAR_LENGTH/2)+2):
+            sys.stdout.write('\b')
+        sys.stdout.write(' %d/%d ' % (current+1, total))
+
+        if current < total-1:
+            sys.stdout.write('\r')
+        else:
+            sys.stdout.write('\n')
+        sys.stdout.flush()
+
 
 def format_time(seconds):
     days = int(seconds / 3600/24)
