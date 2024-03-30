@@ -71,7 +71,7 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
     # Data
-    print('==> Preparing data..')
+    print(f"==> Preparing data; batch size: {config.batch_size_train} train, {config.batch_size_test} test")
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
@@ -122,7 +122,7 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=config.learning_rate,
                           momentum=0.9, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200, verbose=config.verbose_scheduler)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
     def _report_progress(message: str):
         print(message)
 
@@ -192,6 +192,8 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         train()
         test(epoch_)
         scheduler.step()
+        if config.verbose_scheduler:
+            print(scheduler.get_last_lr(), "is learning rate")
 
 
 if __name__ == '__main__':
