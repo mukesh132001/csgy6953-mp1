@@ -6,14 +6,15 @@
 import os
 import sys
 import time
-import math
 
+import torch
+import torch.utils.data
 import torch.nn as nn
 import torch.nn.init as init
 
 
 def get_mean_and_std(dataset):
-    '''Compute the mean and std value of dataset.'''
+    """Compute the mean and std value of dataset."""
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
     mean = torch.zeros(3)
     std = torch.zeros(3)
@@ -27,7 +28,7 @@ def get_mean_and_std(dataset):
     return mean, std
 
 def init_params(net):
-    '''Init layer parameters.'''
+    """Init layer parameters."""
     for m in net.modules():
         if isinstance(m, nn.Conv2d):
             init.kaiming_normal(m.weight, mode='fan_out')

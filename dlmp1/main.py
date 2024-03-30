@@ -17,7 +17,7 @@ import os
 import argparse
 
 from dlmp1.models.resnet import ResNet18
-from utils import progress_bar
+from dlmp1.utils import progress_bar
 
 
 MODEL_FACTORIES = {
