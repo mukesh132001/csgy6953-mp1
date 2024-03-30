@@ -1,6 +1,7 @@
 """Train CIFAR10 with PyTorch."""
 
 import sys
+from typing import NamedTuple
 from typing import Sequence
 
 import torch
@@ -36,20 +37,35 @@ Models available:
     parser.add_argument("--model", metavar="NAME", choices=set(MODEL_FACTORIES.keys()))
     parser.add_argument("--epoch-count", type=int, default=200)
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+    parser.add_argument("--batch-size", type=int, help="train batch size")
     parser.add_argument('--resume', '-r', action='store_true',
                         help='resume from checkpoint')
     args = parser.parse_args(argv1)
     model_name = args.model or ResNet18.__name__
-    perform(
-        model_name=model_name,
+    config = TrainConfig(
         epoch_count=args.epoch_count,
         learning_rate=args.lr,
+        batch_size_train=args.batch_size or 128
+    )
+    perform(
+        model_name=model_name,
+        config=config,
         resume=args.resume,
     )
     return 0
 
 
-def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: bool = False):
+class TrainConfig(NamedTuple):
+
+    epoch_count: int = 200
+    learning_rate: float = 0.1
+    batch_size_train: int = 128
+    batch_size_test: int = 100
+    verbose_scheduler: bool = False
+
+
+def perform(*, model_name: str, config: TrainConfig = None, resume: bool = False):
+    config = config or TrainConfig()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -71,12 +87,12 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
     trainset = torchvision.datasets.CIFAR10(
         root='./data', train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=128, shuffle=True, num_workers=2)
+        trainset, batch_size=config.batch_size_train, shuffle=True, num_workers=2)
 
     testset = torchvision.datasets.CIFAR10(
         root='./data', train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=100, shuffle=False, num_workers=2)
+        testset, batch_size=config.batch_size_test, shuffle=False, num_workers=2)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
                'dog', 'frog', 'horse', 'ship', 'truck')
@@ -101,9 +117,9 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
         start_epoch = checkpoint['epoch']
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=learning_rate,
+    optimizer = optim.SGD(net.parameters(), lr=config.learning_rate,
                           momentum=0.9, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200, verbose=config.verbose_scheduler)
     def _report_progress(message: str):
         print(message)
 
@@ -168,8 +184,8 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
             best_acc = acc
 
 
-    for epoch_ in range(start_epoch, start_epoch + epoch_count):
-        print(f'\nEpoch: {epoch_+1}/{epoch_count}')
+    for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
+        print(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train()
         test(epoch_)
         scheduler.step()
