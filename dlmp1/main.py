@@ -114,7 +114,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
         correct = 0
         total = 0
         mean_train_loss = 0
-        for batch_idx, (inputs, targets) in tqdm(enumerate(trainloader), total=len(trainloader)):
+        for batch_idx, (inputs, targets) in tqdm(enumerate(trainloader), total=len(trainloader), file=sys.stdout):
             inputs: Tensor
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
@@ -128,7 +128,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
             mean_train_loss = train_loss/(batch_idx+1)
-        _report_progress('Train Loss: %.3f | Acc: %.3f%% (%d/%d)' % (mean_train_loss, 100.*correct/total, correct, total))
+        _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * correct / total:.2f}% ({correct}/{total})")
 
 
     def test(epoch):
@@ -150,7 +150,7 @@ def perform(*, model_name: str, epoch_count: int, learning_rate: float, resume: 
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 mean_test_loss = test_loss/(batch_idx+1)
-        _report_progress(' Test Loss: %.3f | Acc: %.3f%% (%d/%d)' % (mean_test_loss, 100.*correct/total, correct, total))
+        _report_progress(f" Test Loss: {mean_test_loss:.3f} | Acc: {100 * correct / total:.2f}% ({correct}/{total})")
 
         # Save checkpoint.
         acc = 100.*correct/total
