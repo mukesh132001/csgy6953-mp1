@@ -1,0 +1,75 @@
+==> Preparing data; batch size: 128 train, 100 test
+Files already downloaded and verified
+Files already downloaded and verified
+==> Resuming from checkpoint..
+
+Epoch: 31/40
+100%|██████████| 391/391 [00:49<00:00,  7.93it/s]
+
+Train Loss: 0.126 | Acc: 95.71% (47855/50000)
+ Test Loss: 0.277 | Acc: 91.49% (9149/10000)
+saved checkpoint to ./checkpoint/ckpt.pth
+[0.009999383162408303] is learning rate
+
+Epoch: 32/40
+100%|██████████| 391/391 [00:46<00:00,  8.47it/s]
+
+Train Loss: 0.097 | Acc: 96.79% (48396/50000)
+ Test Loss: 0.315 | Acc: 90.17% (9017/10000)
+[0.009997532801828657] is learning rate
+
+Epoch: 33/40
+100%|██████████| 391/391 [00:46<00:00,  8.44it/s]
+
+Train Loss: 0.088 | Acc: 97.08% (48541/50000)
+ Test Loss: 0.292 | Acc: 91.05% (9105/10000)
+[0.00999444937480985] is learning rate
+
+Epoch: 34/40
+100%|██████████| 391/391 [00:46<00:00,  8.44it/s]
+
+Train Loss: 0.084 | Acc: 97.18% (48588/50000)
+ Test Loss: 0.313 | Acc: 90.49% (9049/10000)
+[0.009990133642141357] is learning rate
+
+Epoch: 35/40
+100%|██████████| 391/391 [00:46<00:00,  8.47it/s]
+
+Train Loss: 0.078 | Acc: 97.45% (48724/50000)
+ Test Loss: 0.319 | Acc: 90.74% (9074/10000)
+[0.009984586668665639] is learning rate
+
+Epoch: 36/40
+100%|██████████| 391/391 [00:45<00:00,  8.52it/s]
+
+Train Loss: 0.078 | Acc: 97.41% (48706/50000)
+ Test Loss: 0.323 | Acc: 90.36% (9036/10000)
+[0.009977809823015398] is learning rate
+
+Epoch: 37/40
+100%|██████████| 391/391 [00:46<00:00,  8.48it/s]
+
+Train Loss: 0.075 | Acc: 97.49% (48743/50000)
+ Test Loss: 0.316 | Acc: 90.56% (9056/10000)
+[0.009969804777275897] is learning rate
+
+Epoch: 38/40
+100%|██████████| 391/391 [00:45<00:00,  8.50it/s]
+
+Train Loss: 0.071 | Acc: 97.60% (48799/50000)
+ Test Loss: 0.320 | Acc: 90.72% (9072/10000)
+[0.009960573506572387] is learning rate
+
+Epoch: 39/40
+100%|██████████| 391/391 [00:45<00:00,  8.53it/s]
+
+Train Loss: 0.073 | Acc: 97.60% (48799/50000)
+ Test Loss: 0.309 | Acc: 91.10% (9110/10000)
+[0.009950118288582784] is learning rate
+
+Epoch: 40/40
+100%|██████████| 391/391 [00:46<00:00,  8.49it/s]
+
+Train Loss: 0.072 | Acc: 97.61% (48806/50000)
+ Test Loss: 0.356 | Acc: 89.94% (8994/10000)
+[0.009938441702975684] is learning rate

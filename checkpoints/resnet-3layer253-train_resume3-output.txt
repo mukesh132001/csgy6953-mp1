@@ -1,0 +1,35 @@
+==> Preparing data; batch size: 128 train, 100 test
+Files already downloaded and verified
+Files already downloaded and verified
+==> Resuming from checkpoint..
+
+Epoch: 34/38
+100%|██████████| 391/391 [00:46<00:00,  8.40it/s]
+
+Train Loss: 0.057 | Acc: 98.37% (49185/50000)
+ Test Loss: 0.245 | Acc: 92.15% (9215/10000)
+
+Epoch: 35/38
+100%|██████████| 391/391 [00:45<00:00,  8.52it/s]
+
+Train Loss: 0.059 | Acc: 98.29% (49145/50000)
+ Test Loss: 0.243 | Acc: 92.18% (9218/10000)
+
+Epoch: 36/38
+100%|██████████| 391/391 [00:45<00:00,  8.52it/s]
+
+Train Loss: 0.055 | Acc: 98.41% (49204/50000)
+ Test Loss: 0.243 | Acc: 92.30% (9230/10000)
+saved checkpoint to ./checkpoint/ckpt.pth
+
+Epoch: 37/38
+100%|██████████| 391/391 [00:45<00:00,  8.54it/s]
+
+Train Loss: 0.055 | Acc: 98.48% (49238/50000)
+ Test Loss: 0.241 | Acc: 92.26% (9226/10000)
+
+Epoch: 38/38
+100%|██████████| 391/391 [00:45<00:00,  8.52it/s]
+
+Train Loss: 0.057 | Acc: 98.36% (49181/50000)
+ Test Loss: 0.243 | Acc: 92.25% (9225/10000)
