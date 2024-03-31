@@ -38,12 +38,17 @@ class TrainConfig(NamedTuple):
     batch_size_test: int = 100
     verbose_scheduler: bool = False
     checkpoint_file: Optional[str] = None
+    seed: Optional[int] = None
 
 
 def perform(*, model: nn.Module = None, model_name: str = None, config: TrainConfig = None, resume: bool = False):
     config = config or TrainConfig()
     checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    was_seeded = False
+    if config.seed is not None:
+        torch.random.manual_seed(config.seed)
+        was_seeded = True
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
     train_losses, test_losses, train_accs, test_accs = [], [], [], []
@@ -97,6 +102,10 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         test_losses = checkpoint.get('test_losses', [])
         train_accs = checkpoint.get('train_accs', [])
         test_accs = checkpoint.get('test_accs', [])
+        rng_state = checkpoint.get('rng_state', None)
+        if rng_state is not None:
+            was_seeded = True
+            torch.random.set_rng_state(rng_state)
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
@@ -169,6 +178,8 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
                 'train_accs': train_accs,
                 'test_accs': test_accs,
             }
+            if was_seeded:
+                state['rng_state'] = torch.random.get_rng_state()
             if not os.path.isdir('checkpoint'):
                 os.mkdir('checkpoint')
             torch.save(state, checkpoint_file)
