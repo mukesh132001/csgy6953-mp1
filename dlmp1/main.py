@@ -3,6 +3,7 @@
 import sys
 from typing import NamedTuple
 from typing import Sequence
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -24,35 +25,9 @@ from dlmp1.models.resnet import ResNet18
 MODEL_FACTORIES = {
     ResNet18.__name__: ResNet18,
 }
+CLASSES = ('plane', 'car', 'bird', 'cat', 'deer',
+           'dog', 'frog', 'horse', 'ship', 'truck')
 
-
-
-def main(argv1: Sequence[str] = None) -> int:
-    parser = argparse.ArgumentParser(
-        description='PyTorch CIFAR10 Training',
-        epilog=f"""\
-Models available:
-  {(os.linesep + "  ").join(sorted(MODEL_FACTORIES.keys()))}
-""")
-    parser.add_argument("--model", metavar="NAME", choices=set(MODEL_FACTORIES.keys()))
-    parser.add_argument("--epoch-count", type=int, default=200)
-    parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-    parser.add_argument("--batch-size", type=int, help="train batch size")
-    parser.add_argument('--resume', '-r', action='store_true',
-                        help='resume from checkpoint')
-    args = parser.parse_args(argv1)
-    model_name = args.model or ResNet18.__name__
-    config = TrainConfig(
-        epoch_count=args.epoch_count,
-        learning_rate=args.lr,
-        batch_size_train=args.batch_size or 128
-    )
-    perform(
-        model_name=model_name,
-        config=config,
-        resume=args.resume,
-    )
-    return 0
 
 
 class TrainConfig(NamedTuple):
@@ -62,10 +37,12 @@ class TrainConfig(NamedTuple):
     batch_size_train: int = 128
     batch_size_test: int = 100
     verbose_scheduler: bool = False
+    checkpoint_file: Optional[str] = None
 
 
 def perform(*, model: nn.Module = None, model_name: str = None, config: TrainConfig = None, resume: bool = False):
     config = config or TrainConfig()
+    checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
@@ -94,8 +71,6 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=config.batch_size_test, shuffle=False, num_workers=2)
 
-    classes = ('plane', 'car', 'bird', 'cat', 'deer',
-               'dog', 'frog', 'horse', 'ship', 'truck')
 
     # Model
     if model_name:
@@ -112,12 +87,12 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
 
     if resume:
         # Load checkpoint.
-        print('==> Resuming from checkpoint..')
         assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load('./checkpoint/ckpt.pth')
+        checkpoint = torch.load(checkpoint_file)
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['acc']
         start_epoch = checkpoint['epoch']
+        print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=config.learning_rate,
@@ -181,7 +156,6 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
             }
             if not os.path.isdir('checkpoint'):
                 os.mkdir('checkpoint')
-            checkpoint_file = './checkpoint/ckpt.pth'
             torch.save(state, checkpoint_file)
             print('saved checkpoint to', checkpoint_file)
             best_acc = acc
@@ -191,9 +165,37 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         print(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train()
         test(epoch_)
-        scheduler.step()
         if config.verbose_scheduler:
-            print(scheduler.get_last_lr(), "is learning rate")
+            print(scheduler.get_last_lr(), "was learning rate for epoch")
+        scheduler.step()
+
+
+def main(argv1: Sequence[str] = None) -> int:
+    parser = argparse.ArgumentParser(
+        description='PyTorch CIFAR10 Training',
+        epilog=f"""\
+Models available:
+  {(os.linesep + "  ").join(sorted(MODEL_FACTORIES.keys()))}
+""")
+    parser.add_argument("--model", metavar="NAME", choices=set(MODEL_FACTORIES.keys()))
+    parser.add_argument("--epoch-count", type=int, default=200)
+    parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+    parser.add_argument("--batch-size", type=int, help="train batch size")
+    parser.add_argument('--resume', '-r', action='store_true',
+                        help='resume from checkpoint')
+    args = parser.parse_args(argv1)
+    model_name = args.model or ResNet18.__name__
+    config = TrainConfig(
+        epoch_count=args.epoch_count,
+        learning_rate=args.lr,
+        batch_size_train=args.batch_size or 128
+    )
+    perform(
+        model_name=model_name,
+        config=config,
+        resume=args.resume,
+    )
+    return 0
 
 
 if __name__ == '__main__':
