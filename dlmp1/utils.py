@@ -131,3 +131,8 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+
+
+# https://discuss.pytorch.org/t/how-do-i-check-the-number-of-parameters-of-a-model/4325
+def count_parameters(model: nn.Module, include_non_trainable: bool = False) -> int:
+    return sum(p.numel() for p in model.parameters() if (include_non_trainable or p.requires_grad))
