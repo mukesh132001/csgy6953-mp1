@@ -46,6 +46,7 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+    train_losses, test_losses, train_accs, test_accs = [], [], [], []
 
     # Data
     print(f"==> Preparing data; batch size: {config.batch_size_train} train, {config.batch_size_test} test")
@@ -92,6 +93,10 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['acc']
         start_epoch = checkpoint['epoch']
+        train_losses = checkpoint.get('train_losses', [])
+        test_losses = checkpoint.get('test_losses', [])
+        train_accs = checkpoint.get('train_accs', [])
+        test_accs = checkpoint.get('test_accs', [])
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
@@ -122,7 +127,10 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
             mean_train_loss = train_loss/(batch_idx+1)
-        _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * correct / total:.2f}% ({correct}/{total})")
+        epoch_train_acc = correct / total
+        train_losses.append(mean_train_loss)
+        train_accs.append(epoch_train_acc)
+        _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * epoch_train_acc:.2f}% ({correct}/{total})")
 
 
     def test(epoch):
@@ -144,7 +152,10 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 mean_test_loss = test_loss/(batch_idx+1)
-        _report_progress(f" Test Loss: {mean_test_loss:.3f} | Acc: {100 * correct / total:.2f}% ({correct}/{total})")
+        epoch_test_acc = correct / total
+        test_accs.append(epoch_test_acc)
+        test_losses.append(mean_test_loss)
+        _report_progress(f" Test Loss: {mean_test_loss:.3f} | Acc: {100 * epoch_test_acc:.2f}% ({correct}/{total})")
 
         # Save checkpoint.
         acc = 100.*correct/total
@@ -153,6 +164,10 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
                 'net': net.state_dict(),
                 'acc': acc,
                 'epoch': epoch,
+                'train_losses': train_losses,
+                'test_losses': test_losses,
+                'train_accs': train_accs,
+                'test_accs': test_accs,
             }
             if not os.path.isdir('checkpoint'):
                 os.mkdir('checkpoint')
