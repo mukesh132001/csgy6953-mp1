@@ -6,7 +6,7 @@ Reference:
 [1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
     Deep Residual Learning for Image Recognition. arXiv:1512.03385
 """
-from typing import List
+
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
@@ -137,46 +137,13 @@ def test():
     print(y.size())
 
 
-class ThreeLayerResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
-        super(ThreeLayerResNet, self).__init__()
-        self.in_planes = 64
-
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
-                               stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
-        self.linear = nn.Linear(256*block.expansion, num_classes)
-        self.pool_kernel_size = 8
-
-    def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1]*(num_blocks-1)
-        layers = []
-        for stride in strides:
-            layers.append(block(self.in_planes, planes, stride))
-            self.in_planes = planes * block.expansion
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        # out = self.layer4(out)
-        out = F.avg_pool2d(out, self.pool_kernel_size)
-        out = out.view(out.size(0), -1)
-        out = self.linear(out)
-        return out
-
-
 class BlockSpec(NamedTuple):
 
     num_blocks: int
     planes: Optional[int] = None
     stride: Optional[int] = 2
     block_type: Union[Type[BasicBlock], Type[Bottleneck]] = BasicBlock
+    pool_kernel_size: Optional[int] = None
 
 
 class BlockLayerListContainer(NamedTuple):
@@ -201,7 +168,7 @@ class CustomResNet(nn.Module):
         self.pool_kernel_size = container.pool_kernel_size
 
     @staticmethod
-    def _make_block_layers(block_specs: Sequence[BlockSpec], pool_kernel_size: Optional[int] = None) -> BlockLayerListContainer:
+    def _make_block_layers(block_specs: Sequence[BlockSpec]) -> BlockLayerListContainer:
         in_planes = block_specs[0].planes
         assert in_planes is not None, "planes must be specified for first block"
         in_size = in_planes
@@ -215,17 +182,13 @@ class CustomResNet(nn.Module):
             for stride in strides:
                 layers.append(block(in_planes, planes, stride))
                 in_planes = planes * block.expansion
-            # print("in_planes", in_planes)
             return nn.Sequential(*layers)
         block_layers = nn.ModuleList()
-        # layer = None
-        # from_size = None
+        pool_kernel_size = None
         for block_spec_ in block_specs:
             layer = _make_layer(block_spec_)
             block_layers.append(layer)
-            # from_size = block_spec_.num_blocks *
-        # assert layer is not None
-        # assert from_size is not None
+            pool_kernel_size = block_spec_.pool_kernel_size
         out_size = in_planes
         if pool_kernel_size is None:
             if out_size == 512:
@@ -233,12 +196,11 @@ class CustomResNet(nn.Module):
             elif out_size == 256:
                 pool_kernel_size = 8
             else:
-                raise ValueError("could not determine pool kernel size")
+                raise ValueError("could not determine pool kernel size; pool_kernel_size must be specified on last block spec")
         return BlockLayerListContainer(block_layers, in_size, out_size, pool_kernel_size)
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        print(end="")
         for layer in self.block_layers:
             out = layer(out)
         out = F.avg_pool2d(out, self.pool_kernel_size)
