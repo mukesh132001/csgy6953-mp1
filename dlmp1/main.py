@@ -1,6 +1,7 @@
 """Train CIFAR10 with PyTorch."""
 
 import sys
+import datetime
 from pathlib import Path
 from typing import NamedTuple
 from typing import Sequence
@@ -77,6 +78,7 @@ class Dataset(NamedTuple):
 class TrainResult(NamedTuple):
 
     checkpoint_file: Path
+    timestamp: str
 
 
 def model_from_name(model_name: str) -> nn.Module:
@@ -214,7 +216,10 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
             print(scheduler.get_last_lr(), "was learning rate for epoch")
         scheduler.step()
 
-    return TrainResult(checkpoint_file=Path(checkpoint_file))
+    return TrainResult(
+        checkpoint_file=Path(checkpoint_file),
+        timestamp=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    )
 
 
 def main(argv1: Sequence[str] = None) -> int:
