@@ -75,6 +75,7 @@ class Dataset(NamedTuple):
             testset, batch_size=batch_size_test, shuffle=False, num_workers=2)
         return Dataset(trainloader, testloader)
 
+
 class TrainResult(NamedTuple):
 
     checkpoint_file: Path
@@ -94,8 +95,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
     if config.seed is not None:
         torch.random.manual_seed(config.seed)
         was_seeded = True
-        if not resume:
-            print("random seed:", config.seed)
+    if not resume:
+        print("random seed:", torch.random.initial_seed())
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
     train_losses, test_losses, train_accs, test_accs = [], [], [], []
