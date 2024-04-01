@@ -1,3 +1,5 @@
+# dependencies present in the colab environment
+
 beautifulsoup4~=4.12.3
 graphviz~=0.20.1
 jupyter~=1.0.0
@@ -19,4 +21,5 @@ tqdm~=4.66.2
 zipp~=3.17.0
 tensorflow==2.15.0
 
+# additional dependencies (not in colab by default)
 torch-summary~=1.4.5
