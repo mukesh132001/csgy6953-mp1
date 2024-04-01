@@ -9,10 +9,10 @@ keywords = ["development"]
 authors = [
   {name = "Mike Chaberski", email = "mac937@nyu.edu" }
 ]
-dependencies = [
-  "pip~=22.3.1"
-]
 
 [build-system]
 requires = ["setuptools>=43.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["dlmp1"]
