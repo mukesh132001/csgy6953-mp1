@@ -19,23 +19,21 @@ import torch.nn.functional as F
 
 
 class BasicBlock(nn.Module):
-    expansion = 1
 
-    def __init__(self, in_planes, planes, stride=1):
+    expansion = 1  # class field
+
+    def __init__(self, in_planes: int, planes: int, stride: int = 1):
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(
-            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
         self.shortcut = nn.Sequential()
-        if stride != 1 or in_planes != self.expansion*planes:
+        if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion*planes,
-                          kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(self.expansion*planes)
+                nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion * planes)
             )
 
     def forward(self, x):
@@ -47,24 +45,22 @@ class BasicBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
+
     expansion = 4
 
     def __init__(self, in_planes, planes, stride=1):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=stride, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes, self.expansion *
-                               planes, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(planes, self.expansion * planes, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(self.expansion*planes)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_planes != self.expansion*planes:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, self.expansion*planes,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(in_planes, self.expansion*planes, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(self.expansion*planes)
             )
 
@@ -78,12 +74,12 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
+
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 64
 
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
@@ -153,22 +149,8 @@ class BlockLayerListContainer(NamedTuple):
     out_size: int
     pool_kernel_size: int
 
-
-class CustomResNet(nn.Module):
-    def __init__(self, block_specs: list[BlockSpec], num_classes=10):
-        super(CustomResNet, self).__init__()
-        in_planes = block_specs[0].planes
-        self.conv1 = nn.Conv2d(3, in_planes, kernel_size=3,
-                               stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(in_planes)
-        container = CustomResNet._make_block_layers(block_specs)
-
-        self.block_layers = container.layers
-        self.linear = nn.Linear(container.out_size, num_classes)
-        self.pool_kernel_size = container.pool_kernel_size
-
     @staticmethod
-    def _make_block_layers(block_specs: Sequence[BlockSpec]) -> BlockLayerListContainer:
+    def make_block_layers(block_specs: Sequence[BlockSpec]) -> 'BlockLayerListContainer':
         in_planes = block_specs[0].planes
         assert in_planes is not None, "planes must be specified for first block"
         in_size = in_planes
@@ -198,6 +180,26 @@ class CustomResNet(nn.Module):
             else:
                 raise ValueError("could not determine pool kernel size; pool_kernel_size must be specified on last block spec")
         return BlockLayerListContainer(block_layers, in_size, out_size, pool_kernel_size)
+
+
+class Hyperparametry(NamedTuple):
+
+    first_conv_kernel_size: int = 3
+    block_conv_kernel_size: int = 3
+    pool_kernel_size: Optional[int] = None
+
+
+class CustomResNet(nn.Module):
+    def __init__(self, block_specs: list[BlockSpec], num_classes=10):
+        super(CustomResNet, self).__init__()
+        in_planes = block_specs[0].planes
+        self.conv1 = nn.Conv2d(3, in_planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(in_planes)
+        container = BlockLayerListContainer.make_block_layers(block_specs)
+
+        self.block_layers = container.layers
+        self.linear = nn.Linear(container.out_size, num_classes)
+        self.pool_kernel_size = container.pool_kernel_size
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
