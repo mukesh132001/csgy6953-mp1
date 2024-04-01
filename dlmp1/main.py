@@ -1,6 +1,7 @@
 """Train CIFAR10 with PyTorch."""
 
 import sys
+from pathlib import Path
 from typing import NamedTuple
 from typing import Sequence
 from typing import Optional
@@ -11,6 +12,7 @@ import torch.optim as optim
 import torch.utils.data
 import torch.backends.cudnn as cudnn
 from torch import Tensor
+from torch.utils.data import DataLoader
 
 import torchvision
 import torchvision.transforms as transforms
@@ -20,6 +22,7 @@ import argparse
 
 from tqdm import tqdm
 from dlmp1.models.resnet import ResNet18
+from dlmp1.utils import serialize_rng_state_str
 
 
 MODEL_FACTORIES = {
@@ -34,14 +37,54 @@ class TrainConfig(NamedTuple):
 
     epoch_count: int = 200
     learning_rate: float = 0.1
-    batch_size_train: int = 128
-    batch_size_test: int = 100
     verbose_scheduler: bool = False
     checkpoint_file: Optional[str] = None
     seed: Optional[int] = None
 
 
-def perform(*, model: nn.Module = None, model_name: str = None, config: TrainConfig = None, resume: bool = False):
+class Dataset(NamedTuple):
+
+    trainloader: DataLoader
+    testloader: DataLoader
+
+    @staticmethod
+    def acquire(batch_size_train: int, batch_size_test: int = 100) -> 'Dataset':
+        # Data
+        print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_test} test")
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        trainset = torchvision.datasets.CIFAR10(
+            root='./data', train=True, download=True, transform=transform_train)
+        trainloader = torch.utils.data.DataLoader(
+            trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
+
+        testset = torchvision.datasets.CIFAR10(
+            root='./data', train=False, download=True, transform=transform_test)
+        testloader = torch.utils.data.DataLoader(
+            testset, batch_size=batch_size_test, shuffle=False, num_workers=2)
+        return Dataset(trainloader, testloader)
+
+class TrainResult(NamedTuple):
+
+    checkpoint_file: Path
+
+
+def model_from_name(model_name: str) -> nn.Module:
+    net_factory = MODEL_FACTORIES[model_name]
+    return net_factory()
+
+
+def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, resume: bool = False) -> TrainResult:
     config = config or TrainConfig()
     checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -49,43 +92,14 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
     if config.seed is not None:
         torch.random.manual_seed(config.seed)
         was_seeded = True
+    if not resume:
+        print("random seed:", torch.random.seed())
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
     train_losses, test_losses, train_accs, test_accs = [], [], [], []
 
-    # Data
-    print(f"==> Preparing data; batch size: {config.batch_size_train} train, {config.batch_size_test} test")
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-
-    trainset = torchvision.datasets.CIFAR10(
-        root='./data', train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=config.batch_size_train, shuffle=True, num_workers=2)
-
-    testset = torchvision.datasets.CIFAR10(
-        root='./data', train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=config.batch_size_test, shuffle=False, num_workers=2)
-
-
     # Model
-    if model_name:
-        assert model is None, f"must provide exactly one of {model, model_name}"
-        print('==> Building model', model_name, "on", device)
-        net_factory = MODEL_FACTORIES[model_name]
-        net = net_factory()
-    else:
-        net = model
+    net = model
     net = net.to(device)
     if device == 'cuda':
         net = torch.nn.DataParallel(net)
@@ -106,6 +120,11 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         if rng_state is not None:
             was_seeded = True
             torch.random.set_rng_state(rng_state)
+        rng_state = torch.random.get_rng_state()
+        print("rng state")
+        print()
+        print(serialize_rng_state_str(rng_state))
+        print()
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
@@ -122,7 +141,7 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         correct = 0
         total = 0
         mean_train_loss = 0
-        for batch_idx, (inputs, targets) in tqdm(enumerate(trainloader), total=len(trainloader), file=sys.stdout):
+        for batch_idx, (inputs, targets) in tqdm(enumerate(dataset.trainloader), total=len(dataset.trainloader), file=sys.stdout):
             inputs: Tensor
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
@@ -150,7 +169,7 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
         total = 0
         mean_test_loss = 0
         with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(testloader):
+            for batch_idx, (inputs, targets) in enumerate(dataset.testloader):
                 inputs: Tensor
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = net(inputs)
@@ -195,6 +214,8 @@ def perform(*, model: nn.Module = None, model_name: str = None, config: TrainCon
             print(scheduler.get_last_lr(), "was learning rate for epoch")
         scheduler.step()
 
+    return TrainResult(checkpoint_file=Path(checkpoint_file))
+
 
 def main(argv1: Sequence[str] = None) -> int:
     parser = argparse.ArgumentParser(
@@ -214,10 +235,14 @@ Models available:
     config = TrainConfig(
         epoch_count=args.epoch_count,
         learning_rate=args.lr,
-        batch_size_train=args.batch_size or 128
     )
+    model = model_from_name(model_name)
+    batch_size_train: int = args.batch_size or 128
+    batch_size_test: int = 100
+    dataset = Dataset.acquire(batch_size_train, batch_size_test)
     perform(
-        model_name=model_name,
+        model=model,
+        dataset=dataset,
         config=config,
         resume=args.resume,
     )
