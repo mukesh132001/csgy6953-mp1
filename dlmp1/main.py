@@ -22,6 +22,8 @@ import os
 import argparse
 
 from tqdm import tqdm
+
+import dlmp1.utils
 from dlmp1.models.resnet import ResNet18
 from dlmp1.utils import serialize_rng_state_str
 
@@ -80,13 +82,11 @@ class Dataset(NamedTuple):
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
-        trainset = torchvision.datasets.CIFAR10(
-            root='./data', train=True, download=True, transform=transform_train)
-        trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
+        data_dir = str(dlmp1.utils.get_repo_root() / "data")
+        trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
 
-        testset = torchvision.datasets.CIFAR10(
-            root='./data', train=False, download=True, transform=transform_test)
+        testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size_test, shuffle=False, num_workers=2)
         return Dataset(trainloader, testloader)

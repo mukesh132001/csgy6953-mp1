@@ -3,17 +3,15 @@
     - msr_init: net parameter initialization.
     - progress_bar: progress bar mimic xlua.progress.
 """
-import os
-import sys
-import time
+
 import base64
+from pathlib import Path
 
 import numpy as np
 
 import torch
 import torch.utils.data
 import torch.nn as nn
-import torch.nn.init as init
 from torch import Tensor
 
 
@@ -44,3 +42,8 @@ def serialize_rng_state_str(state: Tensor) -> str:
     np_state_bytes = np_state.tobytes()
     encoded = base64.encodebytes(np_state_bytes).decode('us-ascii')
     return encoded
+
+
+def get_repo_root() -> Path:
+    return Path(__file__).absolute().parent.parent
+
