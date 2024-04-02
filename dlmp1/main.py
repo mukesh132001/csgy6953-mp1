@@ -48,14 +48,15 @@ class TrainConfig(NamedTuple):
 
     def create_lr_scheduler(self, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
         lr_scheduler_spec = self.lr_scheduler_spec or "multistep:0.1,40,80,120,160"
-        if lr_scheduler_spec == "upstream":
-            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
-        parts = lr_scheduler_spec.split(":")
-        scheduler_type, params = parts[0], parts[1:]
+        parts = lr_scheduler_spec.split(":", maxsplit=1)
+        scheduler_type = parts[0]
         if scheduler_type == "multistep":
+            params = parts[1].split(",")
             gamma = float(params[0])
             steps = [int(p) for p in params[1:]]
             return torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=steps, gamma=gamma)
+        if lr_scheduler_spec == "upstream":
+            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
         raise NotImplementedError(f"unrecognized lr scheduler: {repr(lr_scheduler_spec)}")
 
 
