@@ -41,7 +41,6 @@ class TrainConfig(NamedTuple):
 
     epoch_count: int = 200
     learning_rate: float = 0.1
-    verbose_scheduler: bool = False
     checkpoint_file: Optional[str] = None
     seed: Optional[int] = None
     lr_scheduler_spec: Optional[str] = None
