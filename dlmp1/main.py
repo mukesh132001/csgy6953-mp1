@@ -31,6 +31,9 @@ MODEL_FACTORIES = {
 }
 CLASSES = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
+# these are pre-calculated with utils.get_mean_and_std()
+TRAIN_SET_MEAN = (0.4914, 0.4822, 0.4465)
+TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
 
 
 
@@ -41,6 +44,19 @@ class TrainConfig(NamedTuple):
     verbose_scheduler: bool = False
     checkpoint_file: Optional[str] = None
     seed: Optional[int] = None
+    lr_scheduler_spec: Optional[str] = None
+
+    def create_lr_scheduler(self, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
+        lr_scheduler_spec = self.lr_scheduler_spec or "multistep:0.1,40,80,120,160"
+        if lr_scheduler_spec == "upstream":
+            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+        parts = lr_scheduler_spec.split(":")
+        scheduler_type, params = parts[0], parts[1:]
+        if scheduler_type == "multistep":
+            gamma = float(params[0])
+            steps = [int(p) for p in params[1:]]
+            return torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=steps, gamma=gamma)
+        raise NotImplementedError(f"unrecognized lr scheduler: {repr(lr_scheduler_spec)}")
 
 
 class Dataset(NamedTuple):
@@ -49,19 +65,19 @@ class Dataset(NamedTuple):
     testloader: DataLoader
 
     @staticmethod
-    def acquire(batch_size_train: int, batch_size_test: int = 100) -> 'Dataset':
-        # Data
-        print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_test} test")
+    def acquire(batch_size_train: int, batch_size_test: int = 100, quiet: bool = False) -> 'Dataset':
+        if not quiet:
+            print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_test} test")
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
         transform_test = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
         trainset = torchvision.datasets.CIFAR10(
@@ -131,9 +147,9 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=config.learning_rate,
-                          momentum=0.9, weight_decay=5e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    optimizer = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9, weight_decay=5e-4)
+    scheduler = config.create_lr_scheduler(optimizer)
+
     def _report_progress(message: str):
         print(message)
 
@@ -210,11 +226,10 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
 
 
     for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
-        print(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
+        _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train()
         test(epoch_)
-        if config.verbose_scheduler:
-            print(scheduler.get_last_lr(), "was learning rate for epoch")
+        _report_progress(f"{scheduler.get_last_lr()} was learning rate for epoch {epoch_+1}")
         scheduler.step()
 
     return TrainResult(
