@@ -9,11 +9,18 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
+from torch import optim
 import torch.utils.data
 import torch.backends.cudnn as cudnn
 from torch import Tensor
+from torch.optim.lr_scheduler import ConstantLR
+from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from torch.optim.optimizer import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import torchvision
 import torchvision.transforms as transforms
@@ -47,18 +54,43 @@ class TrainConfig(NamedTuple):
     seed: Optional[int] = None
     lr_scheduler_spec: Optional[str] = None
 
-    def create_lr_scheduler(self, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
-        lr_scheduler_spec = self.lr_scheduler_spec or "multistep:0.1,40,80,120,160"
+    def create_lr_scheduler(self, optimizer: Optimizer) -> LRScheduler:
+        lr_scheduler_spec = self.lr_scheduler_spec
+        if not lr_scheduler_spec:
+            return StepLR(optimizer, gamma=0.1, step_size=40)
         parts = lr_scheduler_spec.split(":", maxsplit=1)
         scheduler_type = parts[0]
-        if scheduler_type == "multistep":
-            params = parts[1].split(",")
-            gamma = float(params[0])
-            steps = [int(p) for p in params[1:]]
-            return torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=steps, gamma=gamma)
         if lr_scheduler_spec == "upstream":
-            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
-        raise NotImplementedError(f"unrecognized lr scheduler: {repr(lr_scheduler_spec)}")
+            return CosineAnnealingLR(optimizer, T_max=200)
+        scheduler_class = {
+            "cosine_anneal": CosineAnnealingLR,
+            "step": StepLR,
+            "exponential": ExponentialLR,
+            "constant": ConstantLR,
+            "multistep": MultiStepLR,
+        }[scheduler_type]
+        kwargs = {
+            "cosine_anneal": {"T_max": self.epoch_count},
+        }.get(scheduler_type, {})
+        kwarg_types = {
+            "cosine_anneal": {"T_max": int},
+            "step": {"step_size": int},
+            "multistep": {"milestones": lambda milestones_str: [int(m) for m in milestones_str.split(",")]}
+        }
+        params = dict(p.split('=', maxsplit=1) for p in parts[1].split(";"))
+        for k, v in params.items():
+            if k == "last_epoch":
+                value_type = int
+            else:
+                value_type = kwarg_types.get(scheduler_type, {}).get(k, float)
+            params[k] = value_type(v)
+        kwargs.update(params)
+        return scheduler_class(optimizer, **kwargs)
+
+
+def _truncate(dataset: torch.utils.data.Dataset, limit: int):
+    dataset.data = dataset.data[:limit]
+    dataset.targets = dataset.targets[:limit]
 
 
 class Dataset(NamedTuple):
@@ -67,7 +99,11 @@ class Dataset(NamedTuple):
     testloader: DataLoader
 
     @staticmethod
-    def acquire(batch_size_train: int, batch_size_test: int = 100, quiet: bool = False) -> 'Dataset':
+    def acquire(batch_size_train: int,
+                batch_size_test: int = 100,
+                truncate_train: Optional[int] = None,
+                truncate_test: Optional[int] = None,
+                quiet: bool = False) -> 'Dataset':
         if not quiet:
             print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_test} test")
         transform_train = transforms.Compose([
@@ -83,10 +119,15 @@ class Dataset(NamedTuple):
         ])
 
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
+
         trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train)
+        if truncate_train:
+            _truncate(trainset, truncate_train)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
 
         testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
+        if truncate_test:
+            _truncate(testset, truncate_test)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size_test, shuffle=False, num_workers=2)
         return Dataset(trainloader, testloader)
