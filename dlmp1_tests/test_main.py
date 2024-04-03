@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 from unittest import TestCase
 
@@ -204,3 +205,7 @@ class ModuleMethodsTest(TestCase):
             config = TrainConfig(**all_config_kwargs)
             result = perform(model, dataset, config=config)
             self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
+
+    def test_to_dict(self):
+        s = json.dumps(TrainConfig().to_dict())
+        self.assertIsInstance(s, str)

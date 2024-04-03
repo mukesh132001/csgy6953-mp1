@@ -3,6 +3,7 @@
 import sys
 import datetime
 from pathlib import Path
+from typing import Any
 from typing import Iterator
 from typing import Literal
 from typing import NamedTuple
@@ -60,6 +61,9 @@ class TrainConfig(NamedTuple):
     optimizer_type: Literal["sgd", "adam"] = "sgd"
     sgd_momentum: float = 0.9
     weight_decay: float = 5e-4
+
+    def to_dict(self) -> dict[str, Any]:
+        return self._asdict()
 
     def create_optimizer(self, parameters: Iterator[Parameter]) -> Optimizer:
         if self.optimizer_type == "sgd":
@@ -271,6 +275,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
                 'test_losses': test_losses,
                 'train_accs': train_accs,
                 'test_accs': test_accs,
+                'model_description': str(net),
+                'train_config': config.to_dict()
             }
             if was_seeded:
                 state['rng_state'] = torch.random.get_rng_state()
