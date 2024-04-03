@@ -298,6 +298,7 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
                 'train_accs': train_hist.accs,
                 'test_accs': test_hist.accs,
                 'model_description': str(net),
+                'summary_text': getattr(net, "summary_text", ""),
                 'train_config': config.to_dict()
             }
             if was_seeded:

@@ -200,6 +200,7 @@ class CustomResNet(nn.Module):
         self.block_layers = container.layers
         self.linear = nn.Linear(container.out_size, num_classes)
         self.pool_kernel_size = container.pool_kernel_size
+        self.summary_text = "resnet:" + "-".join(map(str, [b.num_blocks for b in block_specs]))
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
