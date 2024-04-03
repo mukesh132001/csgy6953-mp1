@@ -4,6 +4,7 @@ import sys
 import datetime
 from pathlib import Path
 from typing import Any
+from typing import Protocol
 from typing import Iterator
 from typing import Literal
 from typing import NamedTuple
@@ -27,7 +28,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import torchvision
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 
 import os
 import argparse
@@ -49,8 +50,6 @@ TRAIN_SET_MEAN = (0.4914, 0.4822, 0.4465)
 TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
 
 
-
-
 class TrainConfig(NamedTuple):
 
     learning_rate: float = 0.1
@@ -61,6 +60,7 @@ class TrainConfig(NamedTuple):
     optimizer_type: Literal["sgd", "adam"] = "sgd"
     sgd_momentum: float = 0.9
     weight_decay: float = 5e-4
+    quiet: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return self._asdict()
@@ -128,12 +128,14 @@ class Dataset(NamedTuple):
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
         transform_test = transforms.Compose([
-            transforms.ToTensor(),
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
@@ -152,10 +154,22 @@ class Dataset(NamedTuple):
         return Dataset(trainloader, testloader)
 
 
+class History:
+
+    def __init__(self, losses: list[float] = None, accs: list[float] = None):
+        self.losses = [] if losses is None else losses
+        self.accs = [] if accs is None else accs
+
+    def __str__(self) -> str:
+        return f"History(losses={self.losses}, accs={self.accs})"
+
+
 class TrainResult(NamedTuple):
 
     checkpoint_file: Path
     timestamp: str
+    train_history: History
+    test_history: History
 
 
 def model_from_name(model_name: str) -> nn.Module:
@@ -163,7 +177,12 @@ def model_from_name(model_name: str) -> nn.Module:
     return net_factory()
 
 
-def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, resume: bool = False) -> TrainResult:
+class ModelFactory(Protocol):
+
+    def __call__(self) -> nn.Module: ...
+
+
+def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConfig = None, resume: bool = False) -> TrainResult:
     config = config or TrainConfig()
     checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -175,10 +194,10 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
         print("random seed:", torch.random.initial_seed())
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-    train_losses, test_losses, train_accs, test_accs = [], [], [], []
+    train_hist, test_hist = History(), History()
 
     # Model
-    net = model
+    net = model_provider()
     net = net.to(device)
     if device == 'cuda':
         net = torch.nn.DataParallel(net)
@@ -191,10 +210,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
         net.load_state_dict(checkpoint['net'])
         best_acc = checkpoint['acc']
         start_epoch = checkpoint['epoch']
-        train_losses = checkpoint.get('train_losses', [])
-        test_losses = checkpoint.get('test_losses', [])
-        train_accs = checkpoint.get('train_accs', [])
-        test_accs = checkpoint.get('test_accs', [])
+        train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
+        test_hist = History(checkpoint.get('test_losses', []), checkpoint.get('test_accs', []))
         rng_state = checkpoint.get('rng_state', None)
         if rng_state is not None:
             was_seeded = True
@@ -211,7 +228,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
     scheduler = config.create_lr_scheduler(optimizer)
 
     def _report_progress(message: str):
-        print(message)
+        if not config.quiet:
+            print(message)
 
     # Training
     def train():
@@ -220,7 +238,7 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
         correct = 0
         total = 0
         mean_train_loss = 0
-        for batch_idx, (inputs, targets) in tqdm(enumerate(dataset.trainloader), total=len(dataset.trainloader), file=sys.stdout):
+        for batch_idx, (inputs, targets) in tqdm(enumerate(dataset.trainloader), total=len(dataset.trainloader), file=sys.stdout, disable=config.quiet):
             inputs: Tensor
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
@@ -235,8 +253,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
             correct += predicted.eq(targets).sum().item()
             mean_train_loss = train_loss/(batch_idx+1)
         epoch_train_acc = correct / total
-        train_losses.append(mean_train_loss)
-        train_accs.append(epoch_train_acc)
+        train_hist.losses.append(mean_train_loss)
+        train_hist.accs.append(epoch_train_acc)
         _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * epoch_train_acc:.2f}% ({correct}/{total})")
 
 
@@ -260,8 +278,8 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
                 correct += predicted.eq(targets).sum().item()
                 mean_test_loss = test_loss/(batch_idx+1)
         epoch_test_acc = correct / total
-        test_accs.append(epoch_test_acc)
-        test_losses.append(mean_test_loss)
+        test_hist.accs.append(epoch_test_acc)
+        test_hist.losses.append(mean_test_loss)
         _report_progress(f" Test Loss: {mean_test_loss:.3f} | Acc: {100 * epoch_test_acc:.2f}% ({correct}/{total})")
 
         # Save checkpoint.
@@ -271,10 +289,10 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
                 'net': net.state_dict(),
                 'acc': acc,
                 'epoch': epoch,
-                'train_losses': train_losses,
-                'test_losses': test_losses,
-                'train_accs': train_accs,
-                'test_accs': test_accs,
+                'train_losses': train_hist.losses,
+                'test_losses': test_hist.losses,
+                'train_accs': train_hist.accs,
+                'test_accs': test_hist.accs,
                 'model_description': str(net),
                 'train_config': config.to_dict()
             }
@@ -296,7 +314,9 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
 
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
-        timestamp=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        timestamp=datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+        train_history=train_hist,
+        test_history=test_hist,
     )
 
 
@@ -319,12 +339,11 @@ Models available:
         epoch_count=args.epoch_count,
         learning_rate=args.lr,
     )
-    model = model_from_name(model_name)
     batch_size_train: int = args.batch_size or 128
     batch_size_test: int = 100
     dataset = Dataset.acquire(batch_size_train, batch_size_test)
     perform(
-        model=model,
+        model_provider=lambda: model_from_name(model_name),
         dataset=dataset,
         config=config,
         resume=args.resume,

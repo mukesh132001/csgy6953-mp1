@@ -4,6 +4,8 @@ import base64
 import numpy as np
 import torch.random
 import dlmp1.utils
+import torchvision.transforms.v2 as transforms
+import torchvision.datasets
 
 class UtilsTest(TestCase):
 
@@ -32,10 +34,12 @@ class UtilsTest(TestCase):
 
     @unittest.skip("just a demo")
     def test_get_mean_and_std(self):
-        from torchvision import transforms
-        import torchvision.datasets
         directory = str(dlmp1.utils.get_repo_root() / "data")
-        testset = torchvision.datasets.CIFAR10(root=directory, train=True, download=True, transform=transforms.ToTensor())
+        testset = torchvision.datasets.CIFAR10(root=directory, train=True, download=True, transform=transforms.Compose([transforms.ToImage(), transforms.ToDtype(torch.float32, scale=True)]))
         mean, std = dlmp1.utils.get_mean_and_std(testset)
+        # expect mean tensor([0.4914, 0.4822, 0.4465])
+        #         std tensor([0.2023, 0.1994, 0.2010])
         print("mean", mean)
         print("std", std)
+        self.assertTrue(torch.equal(torch.tensor([0.4914, 0.4822, 0.4465]), mean))
+        self.assertTrue(torch.equal(torch.tensor([0.2023, 0.1994, 0.2010]), std))

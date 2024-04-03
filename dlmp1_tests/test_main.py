@@ -170,7 +170,9 @@ class TrainConfigTest(TestCase):
         rates = _run_schedule(scheduler.optimizer, scheduler, epochs=config.epoch_count, verbose=True)
         self.assertEqual(config.learning_rate, rates[0])
 
-
+    def test_to_dict(self):
+        s = json.dumps(TrainConfig().to_dict())
+        self.assertIsInstance(s, str)
 
 
 class DatasetTest(TestCase):
@@ -184,28 +186,30 @@ class DatasetTest(TestCase):
 class ModuleMethodsTest(TestCase):
 
     def test_perform(self):
-        self._test_perform()
+        self._test_perform(seed=12345)
 
     def test_perform_anneal(self):
-        self._test_perform(lr_scheduler_spec="cosine_anneal:eta_min=0.0001,T_max=100")
+        self._test_perform(seed=23456, lr_scheduler_spec="cosine_anneal:eta_min=0.0001;T_max=100")
 
-    def _test_perform(self, **config_kwargs):
-        dataset = Dataset.acquire(batch_size_train=10, batch_size_test=10, truncate_train=100, truncate_test=100, quiet=True)
-        model = CustomResNet([
-            BlockSpec(2, 64, stride=1),
-            BlockSpec(5, 128, stride=2),
-            BlockSpec(3, 256, stride=2),
-        ])
-        with tempfile.TemporaryDirectory() as tempdir:
-            checkpoint_file = os.path.join(tempdir, "ckpt.pth")
-            all_config_kwargs = {
-                "epoch_count": 2, "checkpoint_file": checkpoint_file
-            }
-            all_config_kwargs.update(config_kwargs)
-            config = TrainConfig(**all_config_kwargs)
-            result = perform(model, dataset, config=config)
-            self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
-
-    def test_to_dict(self):
-        s = json.dumps(TrainConfig().to_dict())
-        self.assertIsInstance(s, str)
+    def _test_perform(self, seed: int, **config_kwargs):
+        with torch.random.fork_rng():
+            dataset = Dataset.acquire(batch_size_train=10, batch_size_test=10, truncate_train=100, truncate_test=100, quiet=True)
+            modeler = lambda: CustomResNet([
+                BlockSpec(2, 64, stride=1),
+                BlockSpec(5, 128, stride=2),
+                BlockSpec(3, 256, stride=2),
+            ])
+            with tempfile.TemporaryDirectory() as tempdir:
+                checkpoint_file = os.path.join(tempdir, "ckpt.pth")
+                all_config_kwargs = {
+                    "epoch_count": 2,
+                    "checkpoint_file": checkpoint_file,
+                    "seed": seed,
+                    "quiet": True,
+                }
+                all_config_kwargs.update(config_kwargs)
+                config = TrainConfig(**all_config_kwargs)
+                result = perform(modeler, dataset, config=config)
+                print("train", result.train_history)
+                print(" test", result.test_history)
+                self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
