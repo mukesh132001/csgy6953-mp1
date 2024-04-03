@@ -186,12 +186,13 @@ class DatasetTest(TestCase):
 class ModuleMethodsTest(TestCase):
 
     def test_perform(self):
-        self._test_perform(seed=12345)
+        self._test_perform(seed=12345, resume=True)
 
     def test_perform_anneal(self):
-        self._test_perform(seed=23456, lr_scheduler_spec="cosine_anneal:eta_min=0.0001;T_max=100")
+        self._test_perform(23456, config_kwargs =  {"lr_scheduler_spec":"cosine_anneal:eta_min=0.0001;T_max=100"})
 
-    def _test_perform(self, seed: int, **config_kwargs):
+    def _test_perform(self, seed: int, *, resume: bool = False, config_kwargs = None):
+        config_kwargs = config_kwargs or {}
         with torch.random.fork_rng():
             dataset = Dataset.acquire(batch_size_train=10, batch_size_test=10, truncate_train=100, truncate_test=100, quiet=True)
             modeler = lambda: CustomResNet([
@@ -213,3 +214,8 @@ class ModuleMethodsTest(TestCase):
                 print("train", result.train_history)
                 print(" test", result.test_history)
                 self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
+                if not resume:
+                    return
+                perform(modeler, dataset, config=config, resume=True)
+
+
