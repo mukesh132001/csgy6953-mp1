@@ -3,6 +3,8 @@
 import sys
 import datetime
 from pathlib import Path
+from typing import Iterator
+from typing import Literal
 from typing import NamedTuple
 from typing import Sequence
 from typing import Optional
@@ -13,6 +15,7 @@ from torch import optim
 import torch.utils.data
 import torch.backends.cudnn as cudnn
 from torch import Tensor
+from torch.nn import Parameter
 from torch.optim.lr_scheduler import ConstantLR
 from torch.optim.lr_scheduler import ExponentialLR
 from torch.optim.lr_scheduler import StepLR
@@ -46,13 +49,25 @@ TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
 
 
 
+
 class TrainConfig(NamedTuple):
 
-    epoch_count: int = 200
     learning_rate: float = 0.1
+    epoch_count: int = 200
     checkpoint_file: Optional[str] = None
     seed: Optional[int] = None
     lr_scheduler_spec: Optional[str] = None
+    optimizer_type: Literal["sgd", "adam"] = "sgd"
+    sgd_momentum: float = 0.9
+    weight_decay: float = 5e-4
+
+    def create_optimizer(self, parameters: Iterator[Parameter]) -> Optimizer:
+        if self.optimizer_type == "sgd":
+            return optim.SGD(parameters, lr=self.learning_rate, weight_decay=self.weight_decay, momentum=self.sgd_momentum)
+        if self.optimizer_type == "adam":
+            return optim.Adam(parameters, lr=self.learning_rate, weight_decay=self.weight_decay)
+        raise NotImplementedError("unsupported optimizer type")
+
 
     def create_lr_scheduler(self, optimizer: Optimizer) -> LRScheduler:
         lr_scheduler_spec = self.lr_scheduler_spec
@@ -188,7 +203,7 @@ def perform(model: nn.Module, dataset: Dataset, *, config: TrainConfig = None, r
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9, weight_decay=5e-4)
+    optimizer = config.create_optimizer(net.parameters())
     scheduler = config.create_lr_scheduler(optimizer)
 
     def _report_progress(message: str):
