@@ -50,6 +50,14 @@ TRAIN_SET_MEAN = (0.4914, 0.4822, 0.4465)
 TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
 
 
+def get_test_set_transform() -> transforms.Transform:
+    return transforms.Compose([
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
+            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
+        ])
+
+
 class TrainConfig(NamedTuple):
 
     learning_rate: float = 0.1
@@ -133,11 +141,7 @@ class Dataset(NamedTuple):
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
-        transform_test = transforms.Compose([
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
-            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
-        ])
+        transform_test = get_test_set_transform()
 
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
 
