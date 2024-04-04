@@ -6,7 +6,7 @@ import torch
 import torch.random
 from torch import nn
 from torch import Tensor
-# noinspection PyUnresolvedReferences
+# noinspection PyPackageRequirements
 from torchsummary import summary
 
 from dlmp1.models.resnet import ResNet18
@@ -14,6 +14,8 @@ from dlmp1.models.resnet import ResNet34
 from dlmp1.models.resnet import ResNet50
 from dlmp1.models.resnet import CustomResNet
 from dlmp1.models.resnet import BlockSpec
+from dlmp1.models.resnet import BlockLayerListContainer
+
 
 class ResNetTest(TestCase):
 
@@ -32,6 +34,22 @@ class ResNetTest(TestCase):
         y: Tensor = model(torch.randn(1, 3, 32, 32))
         self.assertIsInstance(y, Tensor)
         print(y.shape)
+
+
+class BlockLayerListContainerTest(TestCase):
+
+    def test_make_block_layers(self):
+        container = BlockLayerListContainer.make_block_layers([
+            BlockSpec(2, 64, stride=1),
+            BlockSpec(2, 128, stride=2),
+            BlockSpec(2, 256, stride=2),
+            BlockSpec(2, 512, stride=2),
+        ])
+        self.assertEqual(4, container.pool_kernel_size)
+        self.assertEqual(512, container.out_size)
+        self.assertEqual(64, container.in_size)
+
+
 
 
 def creator(block_sizes: list[int], conv_kernel_sizes: list[int] = None, start_planes: int = 64, pool_kernel_size: int = None):
@@ -79,17 +97,6 @@ class CustomResNetTest(TestCase):
                 print("y2", y2)
                 self.assertTrue(torch.equal(y1, y2))
 
-    def test__make_block_layers(self):
-        container = CustomResNet._make_block_layers([
-            BlockSpec(2, 64, stride=1),
-            BlockSpec(2, 128, stride=2),
-            BlockSpec(2, 256, stride=2),
-            BlockSpec(2, 512, stride=2),
-        ])
-        self.assertEqual(4, container.pool_kernel_size)
-        self.assertEqual(512, container.out_size)
-        self.assertEqual(64, container.in_size)
-
     def test_creator(self):
         created = creator([2, 2, 2, 2])
         self.assertIsInstance(created(), CustomResNet)
@@ -131,8 +138,3 @@ class CustomResNetTest(TestCase):
                     # self.assertLessEqual(model_stats.trainable_params, 5_000_000, f"trainable param count: {num_blocks_list}")
                     y: Tensor = model(x)
                     self.assertEqual(torch.Size((1, 10)), y.shape)
-
-
-
-
-

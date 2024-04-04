@@ -180,7 +180,7 @@ class TrainConfigTest(TestCase):
 class DatasetTest(TestCase):
 
     def test_truncate(self):
-        dataset = Dataset.acquire(batch_size_train=25, batch_size_test=10, truncate_train=200, truncate_test=100, quiet=True)
+        dataset = Dataset.acquire(batch_size_train=25, batch_size_val=10, truncate_train=200, truncate_val=100, quiet=True)
         self.assertEqual(8, len(dataset.trainloader))
         self.assertEqual(10, len(dataset.valloader))
 
@@ -196,7 +196,7 @@ class ModuleMethodsTest(TestCase):
     def _test_perform(self, seed: int, *, resume: bool = False, config_kwargs = None):
         config_kwargs = config_kwargs or {}
         with torch.random.fork_rng():
-            dataset = Dataset.acquire(batch_size_train=10, batch_size_test=10, truncate_train=100, truncate_test=100, quiet=True)
+            dataset = Dataset.acquire(batch_size_train=10, batch_size_val=10, truncate_train=100, truncate_val=100, quiet=True)
             modeler = lambda: CustomResNet([
                 BlockSpec(2, 64, stride=1),
                 BlockSpec(5, 128, stride=2),
@@ -214,7 +214,7 @@ class ModuleMethodsTest(TestCase):
                 config = TrainConfig(**all_config_kwargs)
                 result = dlmp1.train.perform(modeler, dataset, config=config)
                 print("train", result.train_history)
-                print(" test", result.test_history)
+                print(" test", result.val_history)
                 self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
                 if not resume:
                     return

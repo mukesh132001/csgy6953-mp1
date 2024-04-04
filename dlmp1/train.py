@@ -1,7 +1,6 @@
 """Train CIFAR10 with PyTorch."""
 
 import sys
-import datetime
 from pathlib import Path
 from typing import Any
 from typing import Protocol
@@ -121,12 +120,12 @@ class Dataset(NamedTuple):
 
     @staticmethod
     def acquire(batch_size_train: int,
-                batch_size_test: int = 100,
+                batch_size_val: int = 100,
                 truncate_train: Optional[int] = None,
-                truncate_test: Optional[int] = None,
+                truncate_val: Optional[int] = None,
                 quiet: bool = False) -> 'Dataset':
         if not quiet:
-            print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_test} test")
+            print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_val} validation")
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -135,7 +134,7 @@ class Dataset(NamedTuple):
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ])
 
-        transform_test = get_test_set_transform()
+        transform_val = get_test_set_transform()
 
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
 
@@ -144,11 +143,10 @@ class Dataset(NamedTuple):
             _truncate(trainset, truncate_train)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
 
-        testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
-        if truncate_test:
-            _truncate(testset, truncate_test)
-        valloader = torch.utils.data.DataLoader(
-            testset, batch_size=batch_size_test, shuffle=False, num_workers=2)
+        valset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_val)
+        if truncate_val:
+            _truncate(valset, truncate_val)
+        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, num_workers=2)
         return Dataset(trainloader, valloader)
 
 
@@ -167,7 +165,7 @@ class TrainResult(NamedTuple):
     checkpoint_file: Path
     timestamp: str
     train_history: History
-    test_history: History
+    val_history: History
 
 
 class ModelFactory(Protocol):
@@ -185,9 +183,9 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
         was_seeded = True
     if not resume:
         print("random seed:", torch.random.initial_seed())
-    best_acc = 0  # best test accuracy
+    best_acc = 0  # best validation accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-    train_hist, test_hist = History(), History()
+    train_hist, val_hist = History(), History()
 
     # Model
     net = model_provider()
@@ -204,7 +202,7 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
         best_acc = checkpoint['acc']
         start_epoch = checkpoint['epoch']
         train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
-        test_hist = History(checkpoint.get('test_losses', []), checkpoint.get('test_accs', []))
+        val_hist = History(checkpoint.get('val_losses', []), checkpoint.get('val_accs', []))
         rng_state = checkpoint.get('rng_state', None)
         if rng_state is not None:
             was_seeded = True
@@ -254,10 +252,10 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
     def test(epoch):
         nonlocal best_acc
         net.eval()
-        test_loss = 0
+        val_loss = 0
         correct = 0
         total = 0
-        mean_test_loss = 0
+        mean_val_loss = 0
         with torch.no_grad():
             for batch_idx, (inputs, targets) in enumerate(dataset.valloader):
                 inputs: Tensor
@@ -265,15 +263,15 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
                 outputs = net(inputs)
                 loss = criterion(outputs, targets)
 
-                test_loss += loss.item()
+                val_loss += loss.item()
                 _, predicted = outputs.max(1)
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
-                mean_test_loss = test_loss/(batch_idx+1)
-        epoch_test_acc = correct / total
-        test_hist.accs.append(epoch_test_acc)
-        test_hist.losses.append(mean_test_loss)
-        _report_progress(f" Test Loss: {mean_test_loss:.3f} | Acc: {100 * epoch_test_acc:.2f}% ({correct}/{total})")
+                mean_val_loss = val_loss / (batch_idx+1)
+        epoch_val_acc = correct / total
+        val_hist.accs.append(epoch_val_acc)
+        val_hist.losses.append(mean_val_loss)
+        _report_progress(f" Test Loss: {mean_val_loss:.3f} | Acc: {100 * epoch_val_acc:.2f}% ({correct}/{total})")
 
         # Save checkpoint.
         acc = 100.*correct/total
@@ -283,9 +281,9 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
                 'acc': acc,
                 'epoch': epoch,
                 'train_losses': train_hist.losses,
-                'test_losses': test_hist.losses,
+                'val_losses': val_hist.losses,
                 'train_accs': train_hist.accs,
-                'test_accs': test_hist.accs,
+                'val_accs': val_hist.accs,
                 'model_description': str(net),
                 'summary_text': getattr(net, "summary_text", ""),
                 'train_config': config.to_dict()
@@ -308,7 +306,7 @@ def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConf
 
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
-        timestamp=datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+        timestamp=dlmp1.utils.timestamp(),
         train_history=train_hist,
-        test_history=test_hist,
+        val_history=val_hist,
     )

@@ -5,6 +5,7 @@
 """
 
 import base64
+import datetime
 from pathlib import Path
 
 import numpy as np
@@ -47,3 +48,6 @@ def serialize_rng_state_str(state: Tensor) -> str:
 def get_repo_root() -> Path:
     return Path(__file__).absolute().parent.parent
 
+
+def timestamp() -> str:
+    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
