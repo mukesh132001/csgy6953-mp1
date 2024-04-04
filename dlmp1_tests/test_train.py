@@ -3,20 +3,22 @@ import json
 import tempfile
 from unittest import TestCase
 
-from dlmp1.main import Dataset
-from dlmp1.models.resnet import ResNet18
 import torch.random
 import torch.optim
 import torch.optim.lr_scheduler
+
+import dlmp1.train
+from dlmp1.train import Dataset
+from dlmp1.models.resnet import ResNet18
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import StepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from dlmp1.main import TrainConfig
+from dlmp1.train import TrainConfig
 from dlmp1.models.resnet import CustomResNet
 from dlmp1.models.resnet import BlockSpec
-from dlmp1.main import perform
+
 
 
 class RandomSeedTest(TestCase):
@@ -180,7 +182,7 @@ class DatasetTest(TestCase):
     def test_truncate(self):
         dataset = Dataset.acquire(batch_size_train=25, batch_size_test=10, truncate_train=200, truncate_test=100, quiet=True)
         self.assertEqual(8, len(dataset.trainloader))
-        self.assertEqual(10, len(dataset.testloader))
+        self.assertEqual(10, len(dataset.valloader))
 
 
 class ModuleMethodsTest(TestCase):
@@ -210,12 +212,10 @@ class ModuleMethodsTest(TestCase):
                 }
                 all_config_kwargs.update(config_kwargs)
                 config = TrainConfig(**all_config_kwargs)
-                result = perform(modeler, dataset, config=config)
+                result = dlmp1.train.perform(modeler, dataset, config=config)
                 print("train", result.train_history)
                 print(" test", result.test_history)
                 self.assertTrue(result.checkpoint_file.is_file(), f"expect checkpoint file exists {result.checkpoint_file}")
                 if not resume:
                     return
-                perform(modeler, dataset, config=config, resume=True)
-
-
+                dlmp1.train.perform(modeler, dataset, config=config, resume=True)
