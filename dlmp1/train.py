@@ -20,13 +20,16 @@ from torch.optim.lr_scheduler import ConstantLR
 from torch.optim.lr_scheduler import ExponentialLR
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torchvision.transforms.v2 import Transform
 
 import torchvision
 import torchvision.transforms.v2 as transforms
+from torchvision.datasets import VisionDataset
 
 import os
 
@@ -109,21 +112,56 @@ class TrainConfig(NamedTuple):
 
 
 def _truncate(dataset: torch.utils.data.Dataset, limit: int):
-    dataset.data = dataset.data[:limit]
-    dataset.targets = dataset.targets[:limit]
+    if hasattr(dataset, "data"):
+        dataset.data = dataset.data[:limit]
+        dataset.targets = dataset.targets[:limit]
+    elif isinstance(dataset, torch.utils.data.Subset):
+        indices = dataset.indices[:limit]
+        dataset.indices = indices
+    elif isinstance(dataset, TransformedDataset):
+        _truncate(dataset.untransformed, limit)
+    else:
+        raise NotImplementedError(f"unsupported dataset type: {type(dataset)}")
 
 
-class Dataset(NamedTuple):
+
+class TransformedDataset(Dataset):
+
+    def __init__(self, untransformed: VisionDataset, transform: Transform):
+        self.untransformed = untransformed
+        self.transform = transform
+
+    def __getitem__(self, index):
+        x, y = self.untransformed[index]
+        x = self.transform(x)
+        return x, y
+
+    def __len__(self):
+        return len(self.untransformed)
+
+
+
+class Partitioning(NamedTuple):
 
     trainloader: DataLoader
     valloader: DataLoader
 
     @staticmethod
-    def acquire(batch_size_train: int,
+    def prepare_test_loader(batch_size: int = 100) -> DataLoader:
+        transform_test = get_test_set_transform()
+        data_dir = str(dlmp1.utils.get_repo_root() / "data")
+        testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+        return testloader
+
+    @staticmethod
+    def prepare(batch_size_train: int,
                 batch_size_val: int = 100,
+                val_proportion: float = 0.1,
                 truncate_train: Optional[int] = None,
                 truncate_val: Optional[int] = None,
-                quiet: bool = False) -> 'Dataset':
+                random_seed: Optional[int] = None,
+                quiet: bool = False) -> 'Partitioning':
         if not quiet:
             print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_val} validation")
         transform_train = transforms.Compose([
@@ -138,16 +176,19 @@ class Dataset(NamedTuple):
 
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
 
-        trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True, transform=transform_train)
+        full_trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True)
+        rng = None if random_seed is None else torch.Generator().manual_seed(random_seed)
+        trainset, valset = torch.utils.data.random_split(full_trainset, [1 - val_proportion, val_proportion], generator=rng)
+        trainset = TransformedDataset(trainset, transform_train)
+        valset = TransformedDataset(valset, transform_val)
         if truncate_train:
             _truncate(trainset, truncate_train)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
 
-        valset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_val)
         if truncate_val:
             _truncate(valset, truncate_val)
         valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, num_workers=2)
-        return Dataset(trainloader, valloader)
+        return Partitioning(trainloader, valloader)
 
 
 class History:
@@ -173,7 +214,11 @@ class ModelFactory(Protocol):
     def __call__(self) -> nn.Module: ...
 
 
-def perform(model_provider: ModelFactory, dataset: Dataset, *, config: TrainConfig = None, resume: bool = False) -> TrainResult:
+def perform(model_provider: ModelFactory,
+            dataset: Partitioning,
+            *,
+            config: TrainConfig = None,
+            resume: bool = False) -> TrainResult:
     config = config or TrainConfig()
     checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
