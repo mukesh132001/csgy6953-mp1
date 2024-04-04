@@ -52,7 +52,8 @@ def open_csv_write(output_file: Optional[str] = None) -> TextIO:
 
 def infer(images_dir, model_file, output_file):
     images_dir = Path(images_dir or dlmp1.utils.get_repo_root() / "data" / "cifar_test_nolabels")
-    model_file = Path(model_file or dlmp1.utils.get_repo_root() / "checkpoints" / "ckpt-20240403-001830.pth")
+    model_file = Path(model_file)
+    assert model_file.is_file(), f"not found: {model_file}"
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     ckpt = torch.load(model_file, map_location=device)
     net = CustomResNet([
@@ -86,7 +87,7 @@ def infer(images_dir, model_file, output_file):
 def main() -> int:
     parser = ArgumentParser()
     parser.add_argument("-i", "--input")
-    parser.add_argument("-m", "--model")
+    parser.add_argument("-m", "--model", required=True)
     parser.add_argument("-o", "--output")
     args = parser.parse_args()
     infer(args.input, args.model, args.output)
