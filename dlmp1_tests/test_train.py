@@ -19,7 +19,9 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from dlmp1.train import TrainConfig
 from dlmp1.models.resnet import CustomResNet
 from dlmp1.models.resnet import BlockSpec
-
+from dlmp1.models.resnet import CustomResNetWithDropout
+from dlmp1.models.resnet import Hyperparametry
+from dlmp1.models.resnet import BlockSpec
 
 
 class RandomSeedTest(TestCase):
@@ -213,15 +215,30 @@ class ModuleMethodsTest(TestCase):
     def test_perform_anneal(self):
         self._test_perform(23456, config_kwargs =  {"lr_scheduler_spec":"cosine_anneal:eta_min=0.0001;T_max=100"})
 
-    def _test_perform(self, seed: int, *, resume: bool = False, config_kwargs = None):
+    def test_perform_dropout(self):
+        def _create_model():
+            hyperparametry = Hyperparametry(
+                pre_blocks_dropout_rate=0.2,
+                post_blocks_dropout_rate=0.2,
+                between_blocks_dropout_rate=0.2,
+            )
+            return CustomResNetWithDropout([
+                BlockSpec(2, 64, stride=1),
+                BlockSpec(5, 128, stride=2),
+                BlockSpec(3, 256, stride=2),
+            ], hyperparametry=hyperparametry)
+        self._test_perform(seed=12345, modeler=_create_model)
+
+    def _test_perform(self, seed: int, *, resume: bool = False, config_kwargs = None, modeler = None):
         config_kwargs = config_kwargs or {}
         with torch.random.fork_rng():
             dataset = Partitioning.prepare(batch_size_train=10, batch_size_val=10, truncate_train=100, truncate_val=100, quiet=True)
-            modeler = lambda: CustomResNet([
+            default_modeler = lambda: CustomResNet([
                 BlockSpec(2, 64, stride=1),
                 BlockSpec(5, 128, stride=2),
                 BlockSpec(3, 256, stride=2),
             ])
+            modeler = modeler or default_modeler
             with tempfile.TemporaryDirectory() as tempdir:
                 checkpoint_file = os.path.join(tempdir, "ckpt.pth")
                 all_config_kwargs = {

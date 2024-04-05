@@ -241,7 +241,8 @@ class CustomResNetWithDropout(CustomResNet):
         out = self.pre_blocks_dropout(out)
         for layer_index, layer in enumerate(self.block_layers):
             if layer_index > 0:
-                out = self.between_blocks_dropouts[layer_index - 1]
+                dropout = self.between_blocks_dropouts[layer_index - 1]
+                out = dropout(out)
             out = layer(out)
         out = self.post_blocks_dropout(out)
         out = F.avg_pool2d(out, self.pool_kernel_size)

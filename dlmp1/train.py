@@ -333,6 +333,9 @@ def perform(model_provider: ModelFactory,
     def _report_progress(message: str):
         if not config.quiet:
             print(message)
+    _report_progress(f"model: {type(net).__name__}")
+    _report_progress(f"optimizer: {type(optimizer).__name__}")
+    _report_progress(f"scheduler: {type(scheduler).__name__}")
 
     # Training
     def train():
