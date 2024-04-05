@@ -13,6 +13,7 @@ from dlmp1.models.resnet import ResNet18
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.lr_scheduler import StepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from dlmp1.train import TrainConfig
@@ -122,6 +123,14 @@ class TrainConfigTest(TestCase):
         optimizer = _test_optimizer(0.01)
         scheduler = TrainConfig(lr_scheduler_spec=f"step:gamma=1.0;step_size=1").create_lr_scheduler(optimizer)
         self._assert_flat(scheduler, 0.01)
+
+    def test_plateau(self):
+        optimizer = _test_optimizer(0.01)
+        config = TrainConfig(lr_scheduler_spec="plateau:factor=0.5;patience=20")
+        scheduler = config.create_lr_scheduler(optimizer)
+        self.assertIsInstance(scheduler, ReduceLROnPlateau)
+        self.assertEqual(0.5, scheduler.factor)
+        self.assertEqual(20, scheduler.patience)
 
     def _assert_flat(self, scheduler: LRScheduler, lr: float):
         with torch.random.fork_rng():

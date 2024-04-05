@@ -21,6 +21,7 @@ from torch.nn import Parameter
 from torch.optim.lr_scheduler import ConstantLR
 from torch.optim.lr_scheduler import ExponentialLR
 from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from torch.optim.optimizer import Optimizer
@@ -105,6 +106,7 @@ class TrainConfig(NamedTuple):
             "exponential": ExponentialLR,
             "constant": ConstantLR,
             "multistep": MultiStepLR,
+            "plateau": ReduceLROnPlateau,
         }[scheduler_type]
         kwargs = {
             "cosine_anneal": {"T_max": self.epoch_count},
@@ -112,7 +114,8 @@ class TrainConfig(NamedTuple):
         kwarg_types = {
             "cosine_anneal": {"T_max": int},
             "step": {"step_size": int},
-            "multistep": {"milestones": lambda milestones_str: [int(m) for m in milestones_str.split(",")]}
+            "multistep": {"milestones": lambda milestones_str: [int(m) for m in milestones_str.split(",")]},
+            "plateau": {"mode": str, "patience": int, "threshold_mode": str, "cooldown": int},
         }
         params = dict(p.split('=', maxsplit=1) for p in parts[1].split(";"))
         for k, v in params.items():
@@ -358,7 +361,7 @@ def perform(model_provider: ModelFactory,
         _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * epoch_train_acc:.2f}% ({correct}/{total})")
 
 
-    def test(epoch):
+    def test(epoch) -> EpochInference:
         nonlocal best_acc
         inf_result = inference_all(net, device, dataset.valloader, criterion=criterion)
         epoch_val_acc = inf_result.accuracy()
@@ -388,14 +391,16 @@ def perform(model_provider: ModelFactory,
             torch.save(state, checkpoint_file)
             print('saved checkpoint to', checkpoint_file)
             best_acc = acc
+        return inf_result
 
 
     for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
         _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train()
-        test(epoch_)
+        val_inf_result = test(epoch_)
         _report_progress(f"{scheduler.get_last_lr()} was learning rate for epoch {epoch_+1}")
-        scheduler.step()
+        scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
+        scheduler.step(scheduler_step_arg)
 
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
