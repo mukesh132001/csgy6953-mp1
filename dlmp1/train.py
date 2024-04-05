@@ -65,6 +65,7 @@ class TrainConfig(NamedTuple):
 
     * step:gamma=0.1;step_size=20
     * multistep:gamma=0.1;milestones=[50,75,100]
+    * cosine_anneal:eta_min=0.0001
 
     Use lr_scheduler_spec="step:gamma=1;step_size=1" for a constant learning rate.
     """
