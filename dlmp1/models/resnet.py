@@ -222,7 +222,7 @@ class CustomResNet(nn.Module):
         return out
 
 
-class CustomResNetWithDropout(nn.Module):
+class CustomResNetWithDropout(CustomResNet):
 
     def __init__(self,
                  block_specs: list[BlockSpec],
