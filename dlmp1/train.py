@@ -8,6 +8,8 @@ from typing import Iterator
 from typing import Literal
 from typing import NamedTuple
 from typing import Optional
+from typing import Union
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -44,7 +46,8 @@ CLASSES = ('plane', 'car', 'bird', 'cat', 'deer',
 # these are pre-calculated with utils.get_mean_and_std()
 TRAIN_SET_MEAN = (0.4914, 0.4822, 0.4465)
 TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
-
+Device = Union[str, torch.device]
+Criterion = Callable[[Tensor, Tensor], Tensor]
 
 def get_test_set_transform() -> transforms.Transform:
     return transforms.Compose([
@@ -214,6 +217,8 @@ class History:
 class TrainResult(NamedTuple):
 
     checkpoint_file: Path
+    model: nn.Module
+    device: Device
     timestamp: str
     train_history: History
     val_history: History
@@ -229,14 +234,18 @@ class EpochInference(NamedTuple):
         return self.correct / self.total
 
 
-def inference_all(net: nn.Module, device, dataloader: DataLoader, criterion = None) -> EpochInference:
+def inference_all(net: nn.Module,
+                  device: Device,
+                  dataloader: DataLoader,
+                  criterion: Optional[Criterion] = None,
+                  show_progress: bool = False) -> EpochInference:
     net.eval()
     val_loss = 0
     correct = 0
     total = 0
     mean_loss = float("nan") if criterion is None else 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(dataloader):
+        for batch_idx, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader), disable=not show_progress):
             inputs: Tensor
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = net(inputs)
@@ -248,9 +257,6 @@ def inference_all(net: nn.Module, device, dataloader: DataLoader, criterion = No
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
     return EpochInference(correct, total, mean_loss)
-
-
-
 
 
 class ModelFactory(Protocol):
@@ -379,6 +385,8 @@ def perform(model_provider: ModelFactory,
 
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
+        model=net,
+        device=device,
         timestamp=dlmp1.utils.timestamp(),
         train_history=train_hist,
         val_history=val_hist,
