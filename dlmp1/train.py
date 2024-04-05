@@ -364,7 +364,7 @@ def perform(model_provider: ModelFactory,
         epoch_val_acc = inf_result.accuracy()
         val_hist.accs.append(epoch_val_acc)
         val_hist.losses.append(inf_result.mean_loss)
-        _report_progress(f" Test Loss: {inf_result.mean_loss:.3f} | Acc: {100 * epoch_val_acc:.2f}% ({inf_result.correct}/{inf_result.total})")
+        _report_progress(f"  Val Loss: {inf_result.mean_loss:.3f} | Acc: {100 * epoch_val_acc:.2f}% ({inf_result.correct}/{inf_result.total})")
 
         # Save checkpoint.
         acc = 100. * inf_result.accuracy()
