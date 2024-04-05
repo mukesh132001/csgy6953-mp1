@@ -56,6 +56,16 @@ def get_test_set_transform() -> transforms.Transform:
 
 class TrainConfig(NamedTuple):
 
+    """Value class that represents training configuration.
+
+    Some examples of lr_scheduler_spec values:
+
+    * step:gamma=0.1;step_size=20
+    * multistep:gamma=0.1;milestones=[50,75,100]
+
+    Use lr_scheduler_spec="step:gamma=1;step_size=1" for a constant learning rate.
+    """
+
     learning_rate: float = 0.1
     epoch_count: int = 200
     checkpoint_file: Optional[str] = None
@@ -209,6 +219,40 @@ class TrainResult(NamedTuple):
     val_history: History
 
 
+class EpochInference(NamedTuple):
+
+    correct: int
+    total: int
+    mean_loss: float
+
+    def accuracy(self) -> float:
+        return self.correct / self.total
+
+
+def inference_all(net: nn.Module, device, dataloader: DataLoader, criterion = None) -> EpochInference:
+    net.eval()
+    val_loss = 0
+    correct = 0
+    total = 0
+    mean_loss = float("nan") if criterion is None else 0
+    with torch.no_grad():
+        for batch_idx, (inputs, targets) in enumerate(dataloader):
+            inputs: Tensor
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = net(inputs)
+            if criterion is not None:
+                loss = criterion(outputs, targets)
+                val_loss += loss.item()
+                mean_loss = val_loss / (batch_idx+1)
+            _, predicted = outputs.max(1)
+            total += targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+    return EpochInference(correct, total, mean_loss)
+
+
+
+
+
 class ModelFactory(Protocol):
 
     def __call__(self) -> nn.Module: ...
@@ -296,30 +340,14 @@ def perform(model_provider: ModelFactory,
 
     def test(epoch):
         nonlocal best_acc
-        net.eval()
-        val_loss = 0
-        correct = 0
-        total = 0
-        mean_val_loss = 0
-        with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(dataset.valloader):
-                inputs: Tensor
-                inputs, targets = inputs.to(device), targets.to(device)
-                outputs = net(inputs)
-                loss = criterion(outputs, targets)
-
-                val_loss += loss.item()
-                _, predicted = outputs.max(1)
-                total += targets.size(0)
-                correct += predicted.eq(targets).sum().item()
-                mean_val_loss = val_loss / (batch_idx+1)
-        epoch_val_acc = correct / total
+        inf_result = inference_all(net, device, dataset.valloader, criterion=criterion)
+        epoch_val_acc = inf_result.accuracy()
         val_hist.accs.append(epoch_val_acc)
-        val_hist.losses.append(mean_val_loss)
-        _report_progress(f" Test Loss: {mean_val_loss:.3f} | Acc: {100 * epoch_val_acc:.2f}% ({correct}/{total})")
+        val_hist.losses.append(inf_result.mean_loss)
+        _report_progress(f" Test Loss: {inf_result.mean_loss:.3f} | Acc: {100 * epoch_val_acc:.2f}% ({inf_result.correct}/{inf_result.total})")
 
         # Save checkpoint.
-        acc = 100.*correct/total
+        acc = 100. * inf_result.accuracy()
         if acc > best_acc:
             state = {
                 'net': net.state_dict(),
