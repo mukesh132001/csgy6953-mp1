@@ -94,7 +94,7 @@ class TrainConfig(NamedTuple):
     def create_lr_scheduler(self, optimizer: Optimizer) -> LRScheduler:
         lr_scheduler_spec = self.lr_scheduler_spec
         if not lr_scheduler_spec:
-            return StepLR(optimizer, gamma=0.1, step_size=40)
+            return StepLR(optimizer, gamma=1.0, step_size=1_000_000_000)
         parts = lr_scheduler_spec.split(":", maxsplit=1)
         scheduler_type = parts[0]
         if lr_scheduler_spec == "upstream":

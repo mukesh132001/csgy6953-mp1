@@ -79,9 +79,18 @@ class TrainConfigTest(TestCase):
             optimizer = _test_optimizer()
             config = TrainConfig()
             scheduler = config.create_lr_scheduler(optimizer)
+            self._assert_flat(scheduler, config.learning_rate)
+
+    def test_create_lr_scheduler_step(self):
+        with torch.random.fork_rng():
+            optimizer = _test_optimizer()
+            config = TrainConfig(learning_rate=0.1, lr_scheduler_spec="step:gamma=0.5;step_size=100")
+            scheduler = config.create_lr_scheduler(optimizer)
             self.assertIsInstance(scheduler, StepLR)
-            _run_schedule(optimizer, scheduler)
-            self.assertEqual(0.1, scheduler.gamma)
+            rates = _run_schedule(optimizer, scheduler, epochs=300)
+            self.assertListEqual([0.1] * 100, rates[0:100])
+            self.assertListEqual([0.05] * 100, rates[100:200])
+            self.assertListEqual([0.025] * 100, rates[200:300])
 
     def test_create_lr_scheduler_multistep(self):
         initial_lr = 0.1
@@ -109,12 +118,14 @@ class TrainConfigTest(TestCase):
             with self.subTest(epoch=epoch):
                 self.assertAlmostEqual(expected_lr, learning_rates[epoch], msg=f"learning rate at {epoch}", delta=1e-6)
 
-    def test_constant(self):
+    def test_flat(self):
+        optimizer = _test_optimizer(0.01)
+        scheduler = TrainConfig(lr_scheduler_spec=f"step:gamma=1.0;step_size=1").create_lr_scheduler(optimizer)
+        self._assert_flat(scheduler, 0.01)
+
+    def _assert_flat(self, scheduler: LRScheduler, lr: float):
         with torch.random.fork_rng():
-            lr = 0.025
-            optimizer = _test_optimizer(lr)
-            scheduler = TrainConfig(lr_scheduler_spec=f"step:gamma=1.0;step_size=1").create_lr_scheduler(optimizer)
-            rates = _run_schedule(optimizer, scheduler)
+            rates = _run_schedule(scheduler.optimizer, scheduler)
             self.assertSetEqual({lr}, set(rates))
 
 
