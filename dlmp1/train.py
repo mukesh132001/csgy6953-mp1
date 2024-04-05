@@ -225,6 +225,34 @@ class TrainResult(NamedTuple):
     val_history: History
 
 
+class Restored(NamedTuple):
+
+    train_history: History
+    val_history: History
+    was_seeded: bool
+
+
+def restore(checkpoint_file: str, net: nn.Module, quiet: bool = False) -> Restored:
+    checkpoint = torch.load(checkpoint_file)
+    net.load_state_dict(checkpoint['net'])
+    best_acc = checkpoint['acc']
+    start_epoch = checkpoint['epoch']
+    train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
+    val_hist = History(checkpoint.get('val_losses', []), checkpoint.get('val_accs', []))
+    rng_state = checkpoint.get('rng_state', None)
+    was_seeded = False
+    if rng_state is not None:
+        was_seeded = True
+        torch.random.set_rng_state(rng_state)
+    rng_state = torch.random.get_rng_state()
+    if not quiet:
+        print("rng state")
+        print()
+        print(serialize_rng_state_str(rng_state))
+        print()
+        print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
+    return Restored(train_hist, val_hist, was_seeded)
+
 class EpochInference(NamedTuple):
 
     correct: int
@@ -291,25 +319,10 @@ def perform(model_provider: ModelFactory,
         cudnn.benchmark = True
 
     if resume:
-        # Load checkpoint.
-        assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-        checkpoint = torch.load(checkpoint_file)
-        net.load_state_dict(checkpoint['net'])
-        best_acc = checkpoint['acc']
-        start_epoch = checkpoint['epoch']
-        train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
-        val_hist = History(checkpoint.get('val_losses', []), checkpoint.get('val_accs', []))
-        rng_state = checkpoint.get('rng_state', None)
-        if rng_state is not None:
-            was_seeded = True
-            torch.random.set_rng_state(rng_state)
-        rng_state = torch.random.get_rng_state()
-        print("rng state")
-        print()
-        print(serialize_rng_state_str(rng_state))
-        print()
-        print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
-
+        restored = restore(checkpoint_file, net)
+        train_hist = restored.train_history
+        val_hist = restored.val_history
+        was_seeded = was_seeded or restored.was_seeded
     criterion = nn.CrossEntropyLoss()
     optimizer = config.create_optimizer(net.parameters())
     scheduler = config.create_lr_scheduler(optimizer)
