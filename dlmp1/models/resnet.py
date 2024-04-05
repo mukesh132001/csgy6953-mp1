@@ -191,6 +191,8 @@ class BlockLayerListContainer(NamedTuple):
 class Hyperparametry(NamedTuple):
 
     first_conv_kernel_size: int = 3
+    pre_blocks_dropout_rate: float = 0.0
+    post_blocks_dropout_rate: float = 0.0
 
     def first_conv_kernel_padding(self) -> int:
         return self.first_conv_kernel_size // 2
@@ -214,6 +216,29 @@ class CustomResNet(nn.Module):
         out = F.relu(self.bn1(self.conv1(x)))
         for layer in self.block_layers:
             out = layer(out)
+        out = F.avg_pool2d(out, self.pool_kernel_size)
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out
+
+
+class CustomResNetWithDropout(nn.Module):
+
+    def __init__(self,
+                 block_specs: list[BlockSpec],
+                 hyperparametry: Hyperparametry = None,
+                 num_classes=10):
+        super().__init__(block_specs, hyperparametry, num_classes=num_classes)
+        hyperparametry = hyperparametry or Hyperparametry()
+        self.pre_blocks_dropout = nn.Dropout(hyperparametry.pre_blocks_dropout_rate)
+        self.post_blocks_dropout = nn.Dropout(hyperparametry.post_blocks_dropout_rate)
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.pre_blocks_dropout(out)
+        for layer in self.block_layers:
+            out = layer(out)
+        out = self.post_blocks_dropout(out)
         out = F.avg_pool2d(out, self.pool_kernel_size)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
