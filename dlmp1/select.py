@@ -82,4 +82,6 @@ def iterate_selectables(model_factories: Iterable[ModelFactory],
                         train_configs: Iterable[TrainConfig] = None) -> Iterator[Selectable]:
     for model_factory in model_factories:
         for train_config in (train_configs or [TrainConfig()]):
-            yield Selectable(model_factory, train_config)
+            model_desc = getattr(model_factory, "description", "") or "model"
+            config_desc = f"lr={train_config.learning_rate};opt={train_config.optimizer_type};sch={train_config.lr_scheduler_spec}"
+            yield Selectable(model_factory, train_config, description=f"{model_desc};{config_desc}")
