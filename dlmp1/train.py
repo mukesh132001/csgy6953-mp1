@@ -58,6 +58,10 @@ def get_test_set_transform() -> transforms.Transform:
         ])
 
 
+def describe_scheduler(scheduler: LRScheduler) -> dict[str, Any]:
+    return dict((k, v) for k, v in vars(scheduler).items() if k != "optimizer" and not k.startswith("_"))
+
+
 class TrainConfig(NamedTuple):
 
     """Value class that represents training configuration.
@@ -316,6 +320,8 @@ def perform(model_provider: ModelFactory,
 
     # Model
     net = model_provider()
+    model_type = type(net).__name__
+    model_summary = getattr(net, "summary_text", "<unsummarized>")
     net = net.to(device)
     if device == 'cuda':
         net = torch.nn.DataParallel(net)
@@ -330,12 +336,12 @@ def perform(model_provider: ModelFactory,
     optimizer = config.create_optimizer(net.parameters())
     scheduler = config.create_lr_scheduler(optimizer)
 
-    def _report_progress(message: str):
+    def _report_progress(*args):
         if not config.quiet:
-            print(message)
-    _report_progress(f"model: {type(net).__name__}")
+            print(*args)
+    _report_progress(f"model: {model_type}", model_summary)
     _report_progress(f"optimizer: {type(optimizer).__name__}")
-    _report_progress(f"scheduler: {type(scheduler).__name__}")
+    _report_progress(f"scheduler: {type(scheduler).__name__}: {describe_scheduler(scheduler)}")
 
     # Training
     def train():

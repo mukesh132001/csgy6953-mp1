@@ -13,12 +13,13 @@ from dlmp1.models.resnet import ResNet18
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import ConstantLR
+from torch.optim.lr_scheduler import ExponentialLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.lr_scheduler import StepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from dlmp1.train import TrainConfig
 from dlmp1.models.resnet import CustomResNet
-from dlmp1.models.resnet import BlockSpec
 from dlmp1.models.resnet import CustomResNetWithDropout
 from dlmp1.models.resnet import Hyperparametry
 from dlmp1.models.resnet import BlockSpec
@@ -208,6 +209,25 @@ class PartitioningTest(TestCase):
 
 
 class ModuleMethodsTest(TestCase):
+
+    def test_describe_scheduler(self):
+        #             "cosine_anneal": CosineAnnealingLR,
+        #             "step": StepLR,
+        #             "exponential": ExponentialLR,
+        #             "constant": ConstantLR,
+        #             "multistep": MultiStepLR,
+        #             "plateau": ReduceLROnPlateau,
+        optimizer = _test_optimizer()
+        for scheduler in [
+            StepLR(optimizer, 100),
+            MultiStepLR(optimizer, milestones=[20, 50]),
+            CosineAnnealingLR(optimizer, T_max=200),
+            ConstantLR(optimizer),
+            ExponentialLR(optimizer, gamma=0.99),
+            ReduceLROnPlateau(optimizer),
+        ]:
+            # pass if no exception raised
+            self.assertIsNotNone(dlmp1.train.describe_scheduler(scheduler))
 
     def test_perform(self):
         self._test_perform(seed=12345, resume=True)
