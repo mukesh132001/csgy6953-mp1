@@ -198,6 +198,13 @@ class Hyperparametry(NamedTuple):
     def first_conv_kernel_padding(self) -> int:
         return self.first_conv_kernel_size // 2
 
+    def describe(self) -> str:
+        if self == Hyperparametry():
+            return "Hyperparametry(default)"
+        if len({self.pre_blocks_dropout_rate, self.between_blocks_dropout_rate, self.post_blocks_dropout_rate}) == 1:
+            return f"Hyperparametry(k={self.first_conv_kernel_size},dropout={self.pre_blocks_dropout_rate})"
+        return str(self)
+
 
 class CustomResNet(nn.Module):
 

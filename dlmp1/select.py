@@ -4,15 +4,10 @@ from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import NamedTuple
-from typing import Type
 from typing import TypeVar
 from typing import Sequence
 from typing import Callable
 
-from torch.optim import Optimizer
-from torch import nn
-
-import dlmp1.train
 from dlmp1.train import TrainConfig
 from dlmp1.train import ModelFactory
 from dlmp1.models.resnet import Hyperparametry
@@ -46,6 +41,16 @@ def iterate_hyperparametries(first_conv_kernel_sizes: Iterable[int] = None,
             yield construct(Hyperparametry, kwargs)
 
 
+class TaggedModelFactory:
+
+    def __init__(self, creator: ModelFactory, description: str):
+        self.creator = creator
+        self.description = description
+
+    def __call__(self):
+        return self.creator()
+
+
 def _model_factory(numblocks_seq: Sequence[int],
                    hyperparametry: Hyperparametry,
                    conv_kernel_size: int = 3) -> ModelFactory:
@@ -56,7 +61,7 @@ def _model_factory(numblocks_seq: Sequence[int],
             planes = 64 if index == 0 else None
             block_specs.append(BlockSpec(num_blocks=numblocks, planes=planes, stride=stride, conv_kernel_size=conv_kernel_size))
         return CustomResNet(block_specs, hyperparametry)
-    return _create_model
+    return TaggedModelFactory(_create_model, f"{'-'.join(map(str, numblocks_seq))};h={hyperparametry.describe()};k={conv_kernel_size}")
 
 
 def iterate_model_factories(numblocks_specs: Iterable[Sequence[int]],
@@ -70,6 +75,7 @@ class Selectable(NamedTuple):
 
     model_factory: ModelFactory
     train_config: TrainConfig
+    description: str = ""
 
 
 def iterate_selectables(model_factories: Iterable[ModelFactory],

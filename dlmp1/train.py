@@ -331,8 +331,11 @@ def perform(model_provider: ModelFactory,
     if config.seed is not None:
         torch.random.manual_seed(config.seed)
         was_seeded = True
+    def _report_progress(*args):
+        if not config.quiet:
+            print(*args)
     if not resume:
-        print("random seed:", torch.random.initial_seed())
+        _report_progress("random seed:", torch.random.initial_seed())
     best_acc = 0  # best validation accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
     train_hist, val_hist = History(), History()
@@ -355,9 +358,6 @@ def perform(model_provider: ModelFactory,
     optimizer = config.create_optimizer(net.parameters())
     scheduler = config.create_lr_scheduler(optimizer)
 
-    def _report_progress(*args):
-        if not config.quiet:
-            print(*args)
     _report_progress(f"model: {model_type}", model_summary)
     _report_progress(f"optimizer: {type(optimizer).__name__}")
     _report_progress(f"scheduler: {type(scheduler).__name__}: {describe_scheduler(scheduler)}")
