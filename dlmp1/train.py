@@ -395,10 +395,9 @@ def perform(model_provider: ModelFactory,
             }
             if was_seeded:
                 state['rng_state'] = torch.random.get_rng_state()
-            if not os.path.isdir('checkpoint'):
-                os.mkdir('checkpoint')
+            Path(checkpoint_file).parent.mkdir(exist_ok=True, parents=True)
             torch.save(state, checkpoint_file)
-            print('saved checkpoint to', checkpoint_file)
+            _report_progress('saved checkpoint to', checkpoint_file)
             best_acc = acc
         return inf_result
 
