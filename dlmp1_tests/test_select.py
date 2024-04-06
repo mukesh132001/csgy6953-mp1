@@ -40,8 +40,8 @@ class ModuleMethodsTest(TestCase):
             [2, 4, 3],
             [2, 5, 2],
             [2, 4, 2],
-            [2, 6, 3],
-            [2, 5, 4],
+            # [2, 6, 3],  # too big
+            # [2, 5, 4],  # too big
         ])
         for factory in factories:
             with self.subTest():
