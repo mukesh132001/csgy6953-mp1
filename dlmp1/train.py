@@ -34,7 +34,7 @@ import torchvision
 import torchvision.transforms.v2 as transforms
 from torchvision.datasets import VisionDataset
 
-import os
+import uuid
 
 from tqdm import tqdm
 
@@ -300,13 +300,32 @@ class ModelFactory(Protocol):
     def __call__(self) -> nn.Module: ...
 
 
+class PerformCallback(Protocol):
+
+    def __call__(self, epoch: int, lr: Any, train_inf: EpochInference, val_inf: EpochInference): ...
+
+
+# noinspection PyUnusedLocal
+def noop(*args, **kwargs):
+    pass
+
+
 def perform(model_provider: ModelFactory,
             dataset: Partitioning,
             *,
             config: TrainConfig = None,
-            resume: bool = False) -> TrainResult:
+            resume: bool = False,
+            callback: PerformCallback = None) -> TrainResult:
     config = config or TrainConfig()
-    checkpoint_file = config.checkpoint_file or './checkpoint/ckpt.pth'
+    callback = callback or noop
+    if config.checkpoint_file:
+        if config.checkpoint_file == "auto":
+            uniq = str(uuid.uuid4())[:8]
+            checkpoint_file = f"./checkpoint/ckpt-{uniq}.pth"
+        else:
+            checkpoint_file = config.checkpoint_file
+    else:
+        checkpoint_file = "./checkpoint/ckpt.pth"
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     was_seeded = False
     if config.seed is not None:
@@ -344,7 +363,7 @@ def perform(model_provider: ModelFactory,
     _report_progress(f"scheduler: {type(scheduler).__name__}: {describe_scheduler(scheduler)}")
 
     # Training
-    def train():
+    def train() -> EpochInference:
         net.train()
         train_loss = 0
         correct = 0
@@ -368,7 +387,7 @@ def perform(model_provider: ModelFactory,
         train_hist.losses.append(mean_train_loss)
         train_hist.accs.append(epoch_train_acc)
         _report_progress(f"\nTrain Loss: {mean_train_loss:.3f} | Acc: {100 * epoch_train_acc:.2f}% ({correct}/{total})")
-
+        return EpochInference(correct, total, mean_train_loss)
 
     def test(epoch) -> EpochInference:
         nonlocal best_acc
@@ -404,11 +423,15 @@ def perform(model_provider: ModelFactory,
 
     for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
         _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
-        train()
+        train_inf_result = train()
         val_inf_result = test(epoch_)
-        _report_progress(f"{scheduler.get_last_lr()} was learning rate for epoch {epoch_+1}")
+        last_lr = scheduler.get_last_lr()
+        _report_progress(f"{last_lr} was learning rate for epoch {epoch_+1}")
         scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
         scheduler.step(scheduler_step_arg)
+        if callback(epoch_, last_lr, train_inf_result, val_inf_result):
+            _report_progress("callback returned true on epoch", epoch_)
+            break
 
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
