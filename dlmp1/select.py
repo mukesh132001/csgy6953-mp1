@@ -65,10 +65,13 @@ def _model_factory(numblocks_seq: Sequence[int],
 
 
 def iterate_model_factories(numblocks_specs: Iterable[Sequence[int]],
-                            hyperparametries: Iterable[Hyperparametry] = None) -> Iterator[ModelFactory]:
+                            hyperparametries: Iterable[Hyperparametry] = None,
+                            block_conv_kernel_sizes: Iterable[int] = None) -> Iterator[ModelFactory]:
+    block_conv_kernel_sizes = block_conv_kernel_sizes or [3]
     for numblocks_seq in numblocks_specs:
         for hyperparametry in (hyperparametries or [Hyperparametry()]):
-            yield _model_factory(numblocks_seq, hyperparametry)
+            for block_conv_kernel_size in block_conv_kernel_sizes:
+                yield _model_factory(numblocks_seq, hyperparametry, conv_kernel_size=block_conv_kernel_size)
 
 
 class Selectable(NamedTuple):
