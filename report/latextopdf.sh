@@ -15,4 +15,4 @@ fi
 
 mkdir -p "${OUTPUT_DIR}"
 
-exec pdflatex -bibtex -deps -interaction=nonstopmode -output-directory="${OUTPUT_DIR}" "${TEX_FILE}"
+exec latexmk -pdf -f -g -bibtex -deps -synctex=1 -interaction=nonstopmode -output-directory="${OUTPUT_DIR}" "${TEX_FILE}"
