@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 from unittest import TestCase
+from pathlib import Path
 
 import torch.random
 import torch.optim
@@ -9,6 +10,7 @@ import torch.optim.lr_scheduler
 
 import dlmp1.train
 from dlmp1.train import Partitioning
+from dlmp1.train import TrainResult
 from dlmp1.models.resnet import ResNet18
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
@@ -276,3 +278,19 @@ class ModuleMethodsTest(TestCase):
                 if not resume:
                     return
                 dlmp1.train.perform(modeler, dataset, config=config, resume=True)
+
+
+class TrainResultTest(TestCase):
+
+    def test_duration_readable(self):
+        from torch import nn
+        from dlmp1.train import History
+        for duration, expected in [
+            (0, "0 seconds"),
+            (90.1, "1 minute, 30 seconds"),
+            (3735.8, "62 minutes, 16 seconds"),
+        ]:
+            with self.subTest(duration):
+                r = TrainResult(Path("/foo/bar"), nn.Module(), "cuda:0", "sometime", History(), History(), duration=duration)
+                actual = r.duration_readable()
+                self.assertEqual(expected, actual, f"from duration={r.duration}")

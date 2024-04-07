@@ -1,6 +1,8 @@
 """Train CIFAR10 with PyTorch."""
 
 import sys
+import time
+import math
 from pathlib import Path
 from typing import Any
 from typing import Protocol
@@ -47,6 +49,7 @@ CLASSES = ('plane', 'car', 'bird', 'cat', 'deer',
 # these are pre-calculated with utils.get_mean_and_std()
 TRAIN_SET_MEAN = (0.4914, 0.4822, 0.4465)
 TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
+NAN = float("nan")
 Device = Union[str, torch.device]
 Criterion = Callable[[Tensor, Tensor], Tensor]
 
@@ -230,6 +233,20 @@ class TrainResult(NamedTuple):
     timestamp: str
     train_history: History
     val_history: History
+    duration: float = NAN
+    early_stop_reason: Optional[str] = None
+
+    def duration_readable(self) -> str:
+        if math.isfinite(self.duration):
+            parts = []
+            minutes = int(self.duration // 60)
+            if minutes > 0:
+                parts.append(f"{minutes} minute{'' if minutes == 1 else 's'}")
+            seconds = round(self.duration % 60)
+            parts.append(f"{seconds} seconds")
+            return ", ".join(parts)
+        else:
+            return str(self.duration)
 
 
 class Restored(NamedTuple):
@@ -279,7 +296,7 @@ def inference_all(net: nn.Module,
     val_loss = 0
     correct = 0
     total = 0
-    mean_loss = float("nan") if criterion is None else 0
+    mean_loss = NAN if criterion is None else 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader), disable=not show_progress):
             inputs: Tensor
@@ -302,7 +319,7 @@ class ModelFactory(Protocol):
 
 class PerformCallback(Protocol):
 
-    def __call__(self, epoch: int, lr: Any, train_inf: EpochInference, val_inf: EpochInference): ...
+    def __call__(self, epoch: int, lr: Any, train_inf: EpochInference, val_inf: EpochInference) -> Optional[str]: ...
 
 
 # noinspection PyUnusedLocal
@@ -318,6 +335,7 @@ def perform(model_provider: ModelFactory,
             callback: PerformCallback = None) -> TrainResult:
     config = config or TrainConfig()
     callback = callback or noop
+    train_start = time.time()
     if config.checkpoint_file:
         if config.checkpoint_file == "auto":
             uniq = str(uuid.uuid4())[:8]
@@ -420,7 +438,7 @@ def perform(model_provider: ModelFactory,
             best_acc = acc
         return inf_result
 
-
+    early_stop_reason = None
     for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
         _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train_inf_result = train()
@@ -429,10 +447,11 @@ def perform(model_provider: ModelFactory,
         _report_progress(f"{last_lr} was learning rate for epoch {epoch_+1}")
         scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
         scheduler.step(scheduler_step_arg)
-        if callback(epoch_, last_lr, train_inf_result, val_inf_result):
+        early_stop_reason = callback(epoch_, last_lr, train_inf_result, val_inf_result)
+        if early_stop_reason:
             _report_progress("callback returned true on epoch", epoch_)
             break
-
+    train_stop = time.time()
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
         model=net,
@@ -440,4 +459,6 @@ def perform(model_provider: ModelFactory,
         timestamp=dlmp1.utils.timestamp(),
         train_history=train_hist,
         val_history=val_hist,
+        duration=train_stop - train_start,
+        early_stop_reason=early_stop_reason,
     )
