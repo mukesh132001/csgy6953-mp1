@@ -65,12 +65,16 @@ def describe_scheduler(scheduler: LRScheduler) -> dict[str, Any]:
     return dict((k, v) for k, v in vars(scheduler).items() if k != "optimizer" and not k.startswith("_"))
 
 
-def get_last_lr(scheduler: LRScheduler):
+def get_current_lr(optimizer: Optimizer) -> float:
+    # noinspection PyBroadException
     try:
-        return scheduler.get_last_lr()
-    except AttributeError:
-        # ReduceLROnPlateau doesn't support this method, but I wish it did
-        return [NAN]
+        for param_group in optimizer.param_groups:
+            lr: Optional[float] = param_group.get("lr", None)
+            if lr is not None:
+                return lr
+    except Exception:
+        pass
+    return NAN
 
 
 class TrainConfig(NamedTuple):
@@ -261,6 +265,7 @@ class Restored(NamedTuple):
 
     train_history: History
     val_history: History
+    learning_rates: list[float]
     was_seeded: bool
 
 
@@ -271,6 +276,7 @@ def restore(checkpoint_file: str, net: nn.Module, quiet: bool = False) -> Restor
     start_epoch = checkpoint['epoch']
     train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
     val_hist = History(checkpoint.get('val_losses', []), checkpoint.get('val_accs', []))
+    learning_rates = checkpoint.get('learning_rates', [])
     rng_state = checkpoint.get('rng_state', None)
     was_seeded = False
     if rng_state is not None:
@@ -283,7 +289,7 @@ def restore(checkpoint_file: str, net: nn.Module, quiet: bool = False) -> Restor
         print(serialize_rng_state_str(rng_state))
         print()
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
-    return Restored(train_hist, val_hist, was_seeded)
+    return Restored(train_hist, val_hist, learning_rates, was_seeded)
 
 class EpochInference(NamedTuple):
 
@@ -364,6 +370,7 @@ def perform(model_provider: ModelFactory,
         _report_progress("random seed:", torch.random.initial_seed())
     best_acc = 0  # best validation accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+    learning_rates = []
     train_hist, val_hist = History(), History()
 
     # Model
@@ -379,6 +386,7 @@ def perform(model_provider: ModelFactory,
         restored = restore(checkpoint_file, net)
         train_hist = restored.train_history
         val_hist = restored.val_history
+        learning_rates = restored.learning_rates
         was_seeded = was_seeded or restored.was_seeded
     criterion = nn.CrossEntropyLoss()
     optimizer = config.create_optimizer(net.parameters())
@@ -430,12 +438,13 @@ def perform(model_provider: ModelFactory,
                 'net': net.state_dict(),
                 'acc': acc,
                 'epoch': epoch,
+                'learning_rates': learning_rates,
                 'train_losses': train_hist.losses,
                 'val_losses': val_hist.losses,
                 'train_accs': train_hist.accs,
                 'val_accs': val_hist.accs,
                 'model_description': str(net),
-                'summary_text': getattr(net, "summary_text", ""),
+                'summary_text': model_summary,
                 'train_config': config.to_dict()
             }
             if was_seeded:
@@ -451,14 +460,14 @@ def perform(model_provider: ModelFactory,
         if early_stop_reason:
             _report_progress("callback returned true on epoch", epoch_)
             break
-        _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
+        current_lr = get_current_lr(optimizer)
+        learning_rates.append(current_lr)
+        _report_progress(f"\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count} (lr={current_lr}")
         train_inf_result = train()
         val_inf_result = test(epoch_)
-        last_lr = get_last_lr(scheduler)
-        _report_progress(f"{last_lr} was learning rate for epoch {epoch_+1}")
         scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
         scheduler.step(scheduler_step_arg)
-        early_stop_reason = callback(epoch_, last_lr, train_inf_result, val_inf_result)
+        early_stop_reason = callback(epoch_, current_lr, train_inf_result, val_inf_result)
     train_stop = time.time()
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),

@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 from typing import Iterator
+from typing import Union
 from unittest import TestCase
 from pathlib import Path
 
@@ -26,6 +27,7 @@ from dlmp1.models.resnet import CustomResNet
 from dlmp1.models.resnet import CustomResNetWithDropout
 from dlmp1.models.resnet import Hyperparametry
 from dlmp1.models.resnet import BlockSpec
+
 
 
 class RandomSeedTest(TestCase):
@@ -65,11 +67,15 @@ class SchedulerTest(TestCase):
                 scheduler.step()
 
 
-def _run_schedule(optimizer: Optimizer, scheduler: LRScheduler, epochs: int = 500, verbose: bool = False, scheduler_loss_args: Iterator[float] = None) -> list[float]:
+def _run_schedule(optimizer: Optimizer,
+                  scheduler: Union[LRScheduler, ReduceLROnPlateau],
+                  epochs: int = 500,
+                  verbose: bool = False,
+                  scheduler_loss_args: Iterator[float] = None) -> list[float]:
     lrs = []
     width = len(str(epochs))
     for epoch in range(epochs):
-        lr = scheduler.get_last_lr()[0]
+        lr = optimizer.param_groups[0]['lr']
         for _ in range(2):  # simulate multiple batches
             optimizer.step()
         if scheduler_loss_args is None:
@@ -140,10 +146,10 @@ class TrainConfigTest(TestCase):
         self.assertIsInstance(scheduler, ReduceLROnPlateau)
         self.assertEqual(0.5, scheduler.factor)
         self.assertEqual(20, scheduler.patience)
-        # this doesn't work because ReduceLROnPlateau doesn't have a get_last_lr function
-        # import numpy as np
-        # losses = np.linspace(4.0, 1.25, 60).tolist() + ([1.25] * 20) + np.linspace(1.25, 0.25, 40).tolist()
-        # _run_schedule(optimizer, scheduler, epochs=100, scheduler_loss_args=iter(losses))
+        import numpy as np
+        losses = np.linspace(4.0, 1.25, 60).tolist() + ([1.25] * 20) + np.linspace(1.25, 0.25, 40).tolist()
+        lrs = _run_schedule(optimizer, scheduler, epochs=100, scheduler_loss_args=iter(losses))
+        self.assertGreater(len(set(lrs)), 1)
 
     def _assert_flat(self, scheduler: LRScheduler, lr: float):
         with torch.random.fork_rng():
@@ -221,12 +227,6 @@ class PartitioningTest(TestCase):
 class ModuleMethodsTest(TestCase):
 
     def test_describe_scheduler(self):
-        #             "cosine_anneal": CosineAnnealingLR,
-        #             "step": StepLR,
-        #             "exponential": ExponentialLR,
-        #             "constant": ConstantLR,
-        #             "multistep": MultiStepLR,
-        #             "plateau": ReduceLROnPlateau,
         optimizer = _test_optimizer()
         for scheduler in [
             StepLR(optimizer, 100),
