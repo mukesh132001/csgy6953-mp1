@@ -1,6 +1,7 @@
 import os
 import json
 import tempfile
+from typing import Iterator
 from unittest import TestCase
 from pathlib import Path
 
@@ -64,14 +65,17 @@ class SchedulerTest(TestCase):
                 scheduler.step()
 
 
-def _run_schedule(optimizer: Optimizer, scheduler: LRScheduler, epochs: int = 500, verbose: bool = False) -> list[float]:
+def _run_schedule(optimizer: Optimizer, scheduler: LRScheduler, epochs: int = 500, verbose: bool = False, scheduler_loss_args: Iterator[float] = None) -> list[float]:
     lrs = []
     width = len(str(epochs))
     for epoch in range(epochs):
         lr = scheduler.get_last_lr()[0]
         for _ in range(2):  # simulate multiple batches
             optimizer.step()
-        scheduler.step()
+        if scheduler_loss_args is None:
+            scheduler.step()
+        else:
+            scheduler.step(next(scheduler_loss_args))
         lrs.append(lr)
         if verbose:
             print(f"{epoch:{width}d} {lr:.6f}")
@@ -136,6 +140,10 @@ class TrainConfigTest(TestCase):
         self.assertIsInstance(scheduler, ReduceLROnPlateau)
         self.assertEqual(0.5, scheduler.factor)
         self.assertEqual(20, scheduler.patience)
+        # this doesn't work because ReduceLROnPlateau doesn't have a get_last_lr function
+        # import numpy as np
+        # losses = np.linspace(4.0, 1.25, 60).tolist() + ([1.25] * 20) + np.linspace(1.25, 0.25, 40).tolist()
+        # _run_schedule(optimizer, scheduler, epochs=100, scheduler_loss_args=iter(losses))
 
     def _assert_flat(self, scheduler: LRScheduler, lr: float):
         with torch.random.fork_rng():

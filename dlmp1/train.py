@@ -65,6 +65,14 @@ def describe_scheduler(scheduler: LRScheduler) -> dict[str, Any]:
     return dict((k, v) for k, v in vars(scheduler).items() if k != "optimizer" and not k.startswith("_"))
 
 
+def get_last_lr(scheduler: LRScheduler):
+    try:
+        return scheduler.get_last_lr()
+    except AttributeError:
+        # ReduceLROnPlateau doesn't support this method, but I wish it did
+        return [NAN]
+
+
 class TrainConfig(NamedTuple):
 
     """Value class that represents training configuration.
@@ -446,7 +454,7 @@ def perform(model_provider: ModelFactory,
         _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train_inf_result = train()
         val_inf_result = test(epoch_)
-        last_lr = scheduler.get_last_lr()
+        last_lr = get_last_lr(scheduler)
         _report_progress(f"{last_lr} was learning rate for epoch {epoch_+1}")
         scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
         scheduler.step(scheduler_step_arg)
