@@ -440,6 +440,9 @@ def perform(model_provider: ModelFactory,
 
     early_stop_reason = None
     for epoch_ in range(start_epoch, start_epoch + config.epoch_count):
+        if early_stop_reason:
+            _report_progress("callback returned true on epoch", epoch_)
+            break
         _report_progress(f'\nEpoch: {epoch_+1}/{start_epoch + config.epoch_count}')
         train_inf_result = train()
         val_inf_result = test(epoch_)
@@ -448,9 +451,6 @@ def perform(model_provider: ModelFactory,
         scheduler_step_arg = val_inf_result.mean_loss if isinstance(scheduler, ReduceLROnPlateau) else None
         scheduler.step(scheduler_step_arg)
         early_stop_reason = callback(epoch_, last_lr, train_inf_result, val_inf_result)
-        if early_stop_reason:
-            _report_progress("callback returned true on epoch", epoch_)
-            break
     train_stop = time.time()
     return TrainResult(
         checkpoint_file=Path(checkpoint_file),
