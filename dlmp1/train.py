@@ -268,11 +268,13 @@ class Restored(NamedTuple):
     val_history: History
     learning_rates: list[float]
     was_seeded: bool
+    extras: dict[str, Any] = None
 
 
-def restore(checkpoint_file: str, net: nn.Module, quiet: bool = False) -> Restored:
-    checkpoint = torch.load(checkpoint_file)
-    net.load_state_dict(checkpoint['net'])
+def restore(checkpoint_file: str, net: Optional[nn.Module] = None, quiet: bool = False, map_location: Optional[str] = None) -> Restored:
+    checkpoint = torch.load(checkpoint_file, map_location=map_location)
+    if net is not None:
+        net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
     train_hist = History(checkpoint.get('train_losses', []), checkpoint.get('train_accs', []))
@@ -290,7 +292,10 @@ def restore(checkpoint_file: str, net: nn.Module, quiet: bool = False) -> Restor
         print(serialize_rng_state_str(rng_state))
         print()
         print("==> Resuming from checkpoint", checkpoint_file, "at epoch", start_epoch, "with best acc", best_acc)
-    return Restored(train_hist, val_hist, learning_rates, was_seeded)
+    extras = {
+        'train_config': checkpoint.get('train_config', {}),
+    }
+    return Restored(train_hist, val_hist, learning_rates, was_seeded, extras=extras)
 
 class EpochInference(NamedTuple):
 
