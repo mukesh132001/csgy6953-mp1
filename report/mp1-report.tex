@@ -95,9 +95,11 @@
 \title{Image Classification with Mini-ResNet}
 \author {
     % Authors
-    Mike Chaberski,
-    Dinesh,
-    Third Author Name
+    Mike Chaberski
+    and
+    Mukesh Ethiraj
+    and
+    Dinesh Sathunuri
 }
 \affiliations {
     % Affiliations
@@ -116,60 +118,158 @@
 \maketitle
 
 \begin{abstract}
-    A model with ResNet architecture and less than 5 million trainable parameters is
-    herein designed for the task of image classification.
-    The model is trained and evaluated on the CIFAR-10 dataset, which contains very
-    small images across ten classes.
+    A model with ResNet architecture and less than 5 million trainable parameters is herein designed for the task of
+    image classification.
+    The model is trained and evaluated on the CIFAR-10 dataset, which contains very small images across ten classes.
+    Code is available at https://github.com/mike10004/csgy6953-mp1.
 \end{abstract}
 
 \section{Overview}
 
-The goal of this
-This is some introductory text.
-Talk about the problem statement and background on ResNet and CIFAR .
+Image classification, in the context of this machine learning effort, is the task of identifying the content of an image.
+Models with a residual network (ResNet) architecture, that is, deep convolutional neural networks containing layers with
+skip connections, have shown strong performance in the image classification task.
+The original ResNet paper reported 93.5\% accuracy for a model trained and evaluated on the CIFAR-10 dataset.
 
-Make sure to cite the ResNet\cite{dblp:2015} paper.
+INSERT example CIFAR images with class labels, if space allows
 
-Cite the repository\cite{kl:2021} from which code was adapted.
+That original research studied models with large numbers of trainable parameters (though the ResNet architecture in
+general requires many fewer parameters than standard CNN models to achieve good performance).
+The smallest network in the original ResNet paper, ResNet-18, has 11.7 million parameters, according to torch-summary
+analysis of the PyTorch ResNet implementation.
 
-Describe the process and summarize the findings.
+This research focuses on designing, training, and evaluating a model with ResNet architecture that has under five
+million parameters, aiming to achieve high accuracy on CIFAR-10.
+Using model definition and training code adapted from the pytorch-cifar repository of GitHub user kuangliu, model
+hyperparameters and training strategies are determined through experimentation on a validation set.
+The final model produced from this process achieves accuracy of TBD on the CIFAR-10 test dataset.
 
 \section{Methodology}
 
-Here we will describe the methodology.
+To design the optimal model for the task, a series of experiments is performed to determine the best architecture,
+hyperparameters, and training strategies such as regularization, learning rate scheduling, and data augmentation.
+The CIFAR-10 training dataset is split into 90\% for training and 10\% for validation.
+Alternatives are evaluated based on quantitative metrics such as validation accuracy as well as qualitative assessment
+of loss curve trends.
 
-Be sure to mention training parameters such as data augmentation.
+\subsection{Architecture}
 
-Initial model design and selection.
-This involved comparing results of training with relatively few epochs, across different layer structures and optimizers.
+Our model definition code implements the core ResNet feature of convolutional layers with skip connections as a
+pipeline of block sequences, where a block contains two convolutional layers, each with batch normalization, plus the
+skip connection.
+The number of block sequences in the pipeline and the lengths of the individual block sequences form a descriptor of a
+given model architecture.
+For example, the ResNet-18 model has four block sequences, each of length 2, and can be identified by the architecture
+descriptor 2-2-2-2.
 
-Then we took the best of those models and trained it for longer
-and with a variety of learning rate scheduling strategies.
-What we saw was that we could achieve good performance, in terms of
-accuracy on the validation set, but the model was obviously overfitting.
-The training loss would become saturated, with accuracy on the training
-set at greater than 99 percent.
-With such low loss, there is little signal to provide to update the weights.
-Validation improvements after saturation are likely random fluctuations (noise).
+The original ResNet research prefers sequences of at least two blocks.
+Architectures with four such block sequences have more than 5 million trainable parameters, thus candidate
+architectures for our task must contain at most three sequences.
+Based on these constraints, the following candidate architectures are evaluated herein: 2-2-2, 2-4-2, 2-5-2, 2-5-3,
+and 3-5-3.
+The upstream codebase explicitly required four sequences, so it was adapted to support an arbitrary number of block
+sequences.
 
-So we decided to introduce some regularization strategies during training.
-We considered different values for weight decay and different dropout strategies.
+For these initial experiments, hyperparameters and other training details are drawn from the original ResNet paper and
+the upstream repository defaults.
+The learning rate is set to 0.1 and models are trained for 40 epochs with Stochastic Gradient Descent (SGD) at a batch
+size of 128.
+Early experimentation showed that the training has a tendency to reach loss saturation, at which point improvements to
+the maximum validation accuracy are merely random fluctuations from a model overfitted to the training data.
+Therefore training is stopped by default when training accuracy reaches 99.5\%, and in some experiments, that threshold
+is further reduced.
 
-We evaluated again with those, and saw that training was not getting saturated so
-early, so we took the most promising among those strategies and selected it for
-our final model design.
+INSERT results of comparative architecture experiment
 
-We then trained that model for a large number of epochs, stopping training when
-loss because saturated.
+The results show little differentiation among the validation accuracy rates for the different architectures.
+The validation loss is highly volatile for all architectures, so before selecting an architecture, experimentation
+with learning rate scheduling will be conducted in order to compare performance of more stable models.
 
-We show the plots of loss/accuracy on training and validation sets.
+\subsection{Training Strategies}
+
+\subsubsection{Learning Rate Scheduling}
+
+The initial architecture experiments were conducted with a constant learning rate of 0.1.
+In the experiments below, this approach is compared to other learning rate scheduling approaches.
+Approaches under consideration are: step scheduling, as used by the original ResNet paper; cosine annealing, as
+implemented in the upstream codebase; and an adaptive scheduler that reduces the learning rate when validation loss
+plateaus.
+Training is stopped early if the training accuracy reaches 97.5\%.
+
+INSERT learning rate scheduler experiment results
+
+The results show approximately equal validation accuracy across all strategies.
+Because the effect of some regularization strategies discussed below may be entangled with learning rate scheduling,
+the adaptive scheduler is selected for those experiments, as it is less likely to require re-tuning.
+
+Re-running the architecture experiment with the optimal learning rate scheduler shows much more stable validation loss,
+but the differentiation between architectures with respect to validation accuracy is not substantial.
+Therefore we select the 2-2-2 architecture to reduce the risk of overfitting.
+
+\subsubsection{Optimizer}
+
+The optimizer algorithm plays a key role in training, and Adam was considered as an alternative to the default SGD.
+However, initial results were not promising.
+First, Adam appears to be ineffective at the (somewhat large) learning rate 0.1. Validation loss is extremely volatile
+at that learning rate and training loss fails to converge.
+At learning rate 0.01 there is some improvement, but the model still fails to achieve more than 60\% validation
+accuracy, even when trained to twice as many epochs as a model trained with SGD. More investigation is needed to
+determine whether our implementation was flawed, customization of Adam parameters may improve performance, or perhaps
+the algorithm is not well-suited to this type of model and/or dataset characteristics.
+
+INSERT Adam loss/accuracy plots, if space allows
+
+\subsubsection{Regularization}
+
+A suboptimal trend in the experiments reported above is that the training loss tends to become saturated while the
+validation accuracy is in the low- to mid-90\% range.
+When the training loss is saturated, the gradient does not provide adequate signal to adjust the weights.
+Subsequent minor increases in validation accuracy at that point are likely the result of random fluctuations as the
+model becomes overfitted to the training data.
+
+To reduce overfitting, two strategies for regularization were considered: increasing weight decay, and introducing
+dropout into training.
+The upstream codebase defaults to weight decay of 0.0005, and the effects of eliminating and increasing weight decay
+are evaluated.
+To test the effect of dropout, multiple dropout ``layers'' are inserted into the model at the input layer, before and
+after the block sequence pipeline, and between each sequence in the block sequence pipeline.
+Two dropout strategies are evaluated; in both cases, the input layer dropout rate is 20\%, and dropout rates of 20\%
+and 50\% for the hidden layers are evaluated.
+
+INSERT weight decay experiment results
+
+TODO discuss dropout results
+
+INSERT dropout experiment results
+
+TODO discuss dropout results
+Additional data augmentation for the purpose of regularization is potentially worth investigating; the current
+implementation includes random horizontal flip and random crop with 4 pixels of padding.
+
+\subsection{Hyperparameters}
+
+The 2-2-2 architecture selected from the above analysis was evaluated with three different values for the convolution
+kernel size within each block.
+The impact of other hyperparameters, such as the number of channels within blocks and the pool size in the average pool
+layer, may be worthy of consideration, but their values were fixed at the upstream defaults to reduce the search space
+for this investigation.
+Experiments were conducted with models trained with convolution kernel sizes of 3 (the default), 5, and 7, and the
+results are shown below.
+
+INSERT convolution kernel size experiment results
+
+Kernel size 3 is selected as the optimal kernel size because it achieve the highest validation accuracy.
+The effect of varying the kernel size is not large, possibly because the CIFAR image size is quite small (32x32 pixels).
 
 \section{Results}
 
-Here, discuss the results of evaluating the fully-trained final model on the test dataset.
-Describe the CIFAR test dataset.
+The analysis above suggests that the best choice of architecture, training strategy, and hyperparameters is the 2-2-2
+model with adaptive learning rate scheduler, weight decay 0.0005, 20\% input dropout and 50\% hidden dropout, and
+convolution kernel size 3.
+This model was trained to 100 epochs, with early stopping of training (at training accuracy 97.5\%) to avoid overfitting.
+The checkpoint with the best validation accuracy was selected to be evaluated on the test data.
+On the CIFAR-10 test dataset, which contains 10k images, the model's accuracy is TBD.
 
-
-\bibliography{mp1-report}
+\bibliography{aaai24}
 
 \end{document}
