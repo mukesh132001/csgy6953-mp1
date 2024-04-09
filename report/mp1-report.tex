@@ -273,16 +273,14 @@ with respect to overfit.
 
 \subsubsection{Optimizer}
 
-The optimizer algorithm plays a key role in training, and Adam was considered as an alternative to the default SGD.
-However, initial results were not promising.
-First, Adam appears to be ineffective at the (somewhat large) learning rate 0.1. Validation loss is extremely volatile
+The optimizer algorithm plays a key role in training, and Adam was considered as an alternative to the default SGD\@.
+However, initial results showed Adam to be ineffective at the (somewhat large) learning rate $ 0.1 $.
+Validation loss is extremely volatile
 at that learning rate and training loss fails to converge.
-At learning rate 0.01 there is some improvement, but the model still fails to achieve more than 60\% validation
+Using learning rate $ 0.01 $, there is some improvement, but the model still fails to achieve more than 60\% validation
 accuracy, even when trained to twice as many epochs as a model trained with SGD. More investigation is needed to
-determine whether our implementation was flawed, customization of Adam parameters may improve performance, or perhaps
+determine whether our implementation was flawed, more hyperparameter tuning is required, or 
 the algorithm is not well-suited to this type of model and/or dataset characteristics.
-
-INSERT Adam loss/accuracy plots, if space allows
 
 \subsubsection{Regularization}
 
