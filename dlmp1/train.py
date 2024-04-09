@@ -183,11 +183,11 @@ class Partitioning(NamedTuple):
     valloader: DataLoader
 
     @staticmethod
-    def prepare_test_loader(batch_size: int = 100) -> DataLoader:
+    def prepare_test_loader(batch_size: int = 100, num_workers: int = 2) -> DataLoader:
         transform_test = get_test_set_transform()
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
         testset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform_test)
-        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+        testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         return testloader
 
     @staticmethod
@@ -197,6 +197,7 @@ class Partitioning(NamedTuple):
                 truncate_train: Optional[int] = None,
                 truncate_val: Optional[int] = None,
                 random_seed: Optional[int] = None,
+                num_workers: int = 2,
                 quiet: bool = False) -> 'Partitioning':
         if not quiet:
             print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_val} validation")
@@ -219,11 +220,11 @@ class Partitioning(NamedTuple):
         valset = TransformedDataset(valset, transform_val)
         if truncate_train:
             _truncate(trainset, truncate_train)
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=2)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=num_workers)
 
         if truncate_val:
             _truncate(valset, truncate_val)
-        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, num_workers=2)
+        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, num_workers=num_workers)
         return Partitioning(trainloader, valloader)
 
 
