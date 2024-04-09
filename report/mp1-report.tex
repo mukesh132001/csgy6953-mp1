@@ -66,7 +66,7 @@
 % \usepackage{ulem} -- This package is specifically forbidden
 % \usepackage{wrapfig} -- This package is specifically forbidden
 % DISALLOWED COMMANDS
-% \nocopyright -- Your paper will not be published if you use this command
+\nocopyright % -- Your paper will not be published if you use this command
 % \addtolength -- This command may not be used
 % \balance -- This command may not be used
 % \baselinestretch -- Your paper will not be published if you use this command
@@ -131,7 +131,13 @@ Models with a residual network (ResNet) architecture, that is, deep convolutiona
 skip connections, have shown strong performance in the image classification task.
 The original ResNet paper reported 93.5\% accuracy for a model trained and evaluated on the CIFAR-10 dataset.
 
-INSERT example CIFAR images with class labels, if space allows
+\begin{figure}[b]
+\centering
+\includegraphics[width=0.95\columnwidth]{cifar-example-images}
+\caption{CIFAR images from the frog, car, and dog classes.}
+\label{fig1}
+\end{figure}
+
 
 That original research studied models with large numbers of trainable parameters (though the ResNet architecture in
 general requires many fewer parameters than standard CNN models to achieve good performance).
