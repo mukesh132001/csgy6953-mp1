@@ -81,10 +81,22 @@ class Selectable(NamedTuple):
     description: str = ""
 
 
+def confirm_train_config_valid(train_config: TrainConfig):
+    from torch import nn
+    m = nn.Module()
+    m.layer = nn.Linear(10, 1)
+    optimizer = train_config.create_optimizer(m.parameters())
+    train_config.create_lr_scheduler(optimizer)
+    assert train_config.epoch_count > 0, "expect positive epoch count in TrainConfig"
+
+
 def iterate_selectables(model_factories: Iterable[ModelFactory],
                         train_configs: Iterable[TrainConfig] = None) -> Iterator[Selectable]:
+    train_configs = list(train_configs or [TrainConfig()])
+    for train_config in train_configs:
+        confirm_train_config_valid(train_config)
     for model_factory in model_factories:
-        for train_config in (train_configs or [TrainConfig()]):
+        for train_config in train_configs:
             model_desc = getattr(model_factory, "description", "") or "model"
             config_desc = f"lr={train_config.learning_rate};opt={train_config.optimizer_type};sch={train_config.lr_scheduler_spec}"
             yield Selectable(model_factory, train_config, description=f"{model_desc};{config_desc}")
