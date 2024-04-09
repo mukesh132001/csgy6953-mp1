@@ -248,6 +248,7 @@ class ModuleMethodsTest(TestCase):
     def test_perform_dropout(self):
         def _create_model():
             hyperparametry = Hyperparametry(
+                input_layer_dropout_rate=0.2,
                 pre_blocks_dropout_rate=0.2,
                 post_blocks_dropout_rate=0.2,
                 between_blocks_dropout_rate=0.2,
