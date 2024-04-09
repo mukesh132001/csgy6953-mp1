@@ -94,8 +94,9 @@ class CosineAnnealTerminal(CosineAnnealingLR):
 
     """Implementation of cosine annealing scheduler that does not go back up after reaching T_max."""
 
-    def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1, verbose=False):
-        super().__init__(optimizer, T_max, eta_min=eta_min, last_epoch=last_epoch, verbose=verbose)
+    def __init__(self, optimizer, T_max, eta_min=1e-6, last_epoch=-1):
+        super().__init__(optimizer, T_max, eta_min=eta_min, last_epoch=last_epoch)
+
     def get_lr(self):
         would_be = super().get_lr()  # perform in-step check of superclas
         if hasattr(self, "_step_count"):
