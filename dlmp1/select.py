@@ -13,6 +13,7 @@ from dlmp1.train import ModelFactory
 from dlmp1.models.resnet import Hyperparametry
 from dlmp1.models.resnet import BlockSpec
 from dlmp1.models.resnet import CustomResNet
+from dlmp1.models.resnet import CustomResNetWithDropout
 
 T = TypeVar("T")
 
@@ -60,7 +61,10 @@ def _model_factory(numblocks_seq: Sequence[int],
             stride = 1 if index == 0 else 2
             planes = 64 if index == 0 else None
             block_specs.append(BlockSpec(num_blocks=numblocks, planes=planes, stride=stride, conv_kernel_size=conv_kernel_size))
-        return CustomResNet(block_specs, hyperparametry)
+        if hyperparametry.has_dropout():
+            return CustomResNetWithDropout(block_specs, hyperparametry)
+        else:
+            return CustomResNet(block_specs, hyperparametry)
     return TaggedModelFactory(_create_model, f"{'-'.join(map(str, numblocks_seq))};h={hyperparametry.describe()};k={conv_kernel_size}")
 
 

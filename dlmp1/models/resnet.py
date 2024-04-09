@@ -206,6 +206,14 @@ class Hyperparametry(NamedTuple):
             return f"Hyperparametry(k={self.first_conv_kernel_size},ildr={self.input_layer_dropout_rate},dropout={self.pre_blocks_dropout_rate})"
         return str(self)
 
+    def has_dropout(self) -> bool:
+        return max([
+            self.pre_blocks_dropout_rate,
+            self.between_blocks_dropout_rate,
+            self.input_layer_dropout_rate,
+            self.post_blocks_dropout_rate,
+        ]) > 0.0
+
 
 class CustomResNet(nn.Module):
 
