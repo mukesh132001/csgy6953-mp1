@@ -230,15 +230,46 @@ cosine annealing, as implemented in the upstream codebase; and adaptive scheduli
 when validation loss plateaus.
 For these experiments, training is stopped early if the training accuracy reaches 97.5\%.
 
-INSERT learning rate scheduler experiment results
+\begin{table}[b]
+\centering
+%\resizebox{.95\columnwidth}{!}{
+\begin{tabular}{|l|r|}
+    \firsthline
+    Arch/LRS & Val Acc \%    \\
+    \hline
+    2-2-2 Step & 86.7    \\
+    3-5-3 Step & 87.3    \\
+    2-2-2 Cosine annealing & 92.1    \\
+    3-5-3 Cosine annealing & 92.0    \\
+    2-2-2 Adaptive-plateau & 92.2    \\
+    3-5-3 Adaptive-plateau & 91.7    \\
+    \lasthline
+\end{tabular}
+%}
+\caption{Validation accuracy by architecture and Learning Rate Scheduler}
+\label{table2}
+\end{table}
 
-The results show approximately equal validation accuracy across all strategies.
-Because the effect of some regularization strategies discussed below may be entangled with learning rate scheduling,
-the adaptive scheduler is selected for those experiments, as it is less likely to require re-tuning.
+\begin{figure}[b]
+\centering
+\includegraphics[width=0.98\columnwidth]{experiment-lrschedule-3x2}
+\caption{Training and validation loss by architecture and learning rate scheduler.}
+\label{fig3}
+\end{figure}
 
-Re-running the architecture experiment with the optimal learning rate scheduler shows much more stable validation loss,
-but the differentiation between architectures with respect to validation accuracy is not substantial.
-Therefore we select the 2-2-2 architecture to reduce the risk of overfitting.
+
+The results of the learning rate scheduler experiment, shown in Table~\ref{table2} and Figure~\ref{fig3}, indicate that
+the cosine annealing and adaptive-plateau schedulers outperform the step scheduler under the current
+parameterization.
+The cosine annealing scheduler shows a strong downward trend in training loss while validation loss
+stays stagnant.
+This suggests that the cosine annealing scheduler is prone to overfitting, so the
+adaptive-plateau scheduler will be selected by default for subsequent experiments.
+The validation accuracy of the 2-2-2 and 3-5-3 architectures is about the same,
+and we elect to use the 3-5-3 architecture (4.9 million parameters) for its expressiveness
+advantage, keeping in mind that the increased expressiveness means we must be vigilant
+with respect to overfit.
+
 
 \subsubsection{Optimizer}
 
