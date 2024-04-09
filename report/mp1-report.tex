@@ -277,6 +277,13 @@ This model was trained to 100 epochs, with early stopping of training (at traini
 The checkpoint with the best validation accuracy was selected to be evaluated on the test data.
 On the CIFAR-10 test dataset, which contains 10k images, the model's accuracy is TBD.
 
+Most avenues of investigation ended with the choice to use parameters specified by the original ResNet researchers or
+the upstream codebase, or to use near equivalents.
+This suggests either that those authors had performed adequate tuning already or that further exploration of variables,
+with more granular and systematic examination, is warranted.
+Grid search with cross validation would be an appropriate technique for such exploration, given sufficient time and
+computing resources.
+
 \bibliography{aaai24}
 
 \end{document}
