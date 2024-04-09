@@ -163,6 +163,10 @@ class TrainConfig(NamedTuple):
     @staticmethod
     def augmenter(token: str) -> transforms.Transform:
         token = str(token)
+        if token == "hflip":
+            return transforms.RandomHorizontalFlip()
+        if token == "vflip":
+            return transforms.RandomVerticalFlip()
         if token == "random_crop":
             return transforms.RandomCrop(32, padding=4)
         if token == "random_resized_crop":
