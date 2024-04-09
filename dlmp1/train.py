@@ -220,11 +220,11 @@ class Partitioning(NamedTuple):
         valset = TransformedDataset(valset, transform_val)
         if truncate_train:
             _truncate(trainset, truncate_train)
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, num_workers=num_workers)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size_train, shuffle=True, generator=rng, num_workers=num_workers)
 
         if truncate_val:
             _truncate(valset, truncate_val)
-        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, num_workers=num_workers)
+        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size_val, shuffle=False, generator=rng, num_workers=num_workers)
         return Partitioning(trainloader, valloader)
 
 
