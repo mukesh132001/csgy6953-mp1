@@ -92,6 +92,7 @@ def confirm_train_config_valid(train_config: TrainConfig):
     optimizer = train_config.create_optimizer(m.parameters())
     train_config.create_lr_scheduler(optimizer)
     assert train_config.epoch_count > 0, "expect positive epoch count in TrainConfig"
+    train_config.create_train_transform()
 
 
 def iterate_selectables(model_factories: Iterable[ModelFactory],

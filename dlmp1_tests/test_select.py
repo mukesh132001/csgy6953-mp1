@@ -39,14 +39,22 @@ class ModuleMethodsTest(TestCase):
 
     # noinspection PyMethodMayBeStatic
     def test_confirm_train_config_valid_ok(self):
-        dlmp1.select.confirm_train_config_valid(TrainConfig())
-        dlmp1.select.confirm_train_config_valid(TrainConfig(lr_scheduler_spec="cosine_anneal:eta_min=0.001;T_max=200"))
+        for train_config in [
+            TrainConfig(),
+            TrainConfig(lr_scheduler_spec="cosine_anneal:eta_min=0.001;T_max=200"),
+            TrainConfig(augmentations="random_resized_crop;hflip"),
+        ]:
+            with self.subTest():
+                dlmp1.select.confirm_train_config_valid(train_config)
 
-    def test_confirm_train_config_valid_bad(self):
+    def test_confirm_train_config_valid_bad(self, verbose: bool = True):
         for train_config in [
             TrainConfig(epoch_count=0),
             TrainConfig(lr_scheduler_spec="cosine_anneal:eta_min=0.001,T_max=200"),  # typo ',' instead of ';'
+            TrainConfig(augmentations="random_resized_crop;foo;hflip"),
         ]:
             with self.subTest():
                 with self.assertRaises(Exception) as cm:
                     dlmp1.select.confirm_train_config_valid(train_config)
+                if verbose:
+                    print(cm.exception)
