@@ -191,6 +191,7 @@ class BlockLayerListContainer(NamedTuple):
 class Hyperparametry(NamedTuple):
 
     first_conv_kernel_size: int = 3
+    input_layer_dropout_rate: float = 0.0
     pre_blocks_dropout_rate: float = 0.0
     between_blocks_dropout_rate: float = 0.0
     post_blocks_dropout_rate: float = 0.0
@@ -202,7 +203,7 @@ class Hyperparametry(NamedTuple):
         if self == Hyperparametry():
             return "Hyperparametry(default)"
         if len({self.pre_blocks_dropout_rate, self.between_blocks_dropout_rate, self.post_blocks_dropout_rate}) == 1:
-            return f"Hyperparametry(k={self.first_conv_kernel_size},dropout={self.pre_blocks_dropout_rate})"
+            return f"Hyperparametry(k={self.first_conv_kernel_size},ildr={self.input_layer_dropout_rate},dropout={self.pre_blocks_dropout_rate})"
         return str(self)
 
 
@@ -239,12 +240,14 @@ class CustomResNetWithDropout(CustomResNet):
                  num_classes=10):
         super().__init__(block_specs, hyperparametry, num_classes=num_classes)
         hyperparametry = hyperparametry or Hyperparametry()
+        self.input_layer_dropout = nn.Dropout(hyperparametry.input_layer_dropout_rate)
         self.pre_blocks_dropout = nn.Dropout(hyperparametry.pre_blocks_dropout_rate)
         self.post_blocks_dropout = nn.Dropout(hyperparametry.post_blocks_dropout_rate)
         self.between_blocks_dropouts = nn.ModuleList([nn.Dropout(hyperparametry.between_blocks_dropout_rate) for _ in range(len(block_specs) - 1)])
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.input_layer_dropout(x)
+        out = F.relu(self.bn1(self.conv1(out)))
         out = self.pre_blocks_dropout(out)
         for layer_index, layer in enumerate(self.block_layers):
             if layer_index > 0:
