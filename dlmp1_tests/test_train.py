@@ -13,6 +13,7 @@ import torch.optim.lr_scheduler
 import dlmp1.train
 from dlmp1.train import Partitioning
 from dlmp1.train import TrainResult
+from dlmp1.train import CosineAnnealTerminal
 from dlmp1.models.resnet import ResNet18
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
@@ -214,6 +215,11 @@ class TrainConfigTest(TestCase):
     def test_to_dict(self):
         s = json.dumps(TrainConfig().to_dict())
         self.assertIsInstance(s, str)
+
+    def test_scheduler_num_epochs(self):
+        opt = _test_optimizer(0.1)
+        scheduler = CosineAnnealTerminal(opt, T_max=60, eta_min=0.001)
+        _run_schedule(opt, scheduler, epochs=80, verbose=True)
 
 
 class PartitioningTest(TestCase):

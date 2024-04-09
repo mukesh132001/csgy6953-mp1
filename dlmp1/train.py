@@ -90,6 +90,20 @@ def get_current_lr(optimizer: Optimizer) -> float:
     return NAN
 
 
+class CosineAnnealTerminal(CosineAnnealingLR):
+
+    """Implementation of cosine annealing scheduler that does not go back up after reaching T_max."""
+
+    def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1, verbose=False):
+        super().__init__(optimizer, T_max, eta_min=eta_min, last_epoch=last_epoch, verbose=verbose)
+    def get_lr(self):
+        would_be = super().get_lr()  # perform in-step check of superclas
+        if hasattr(self, "_step_count"):
+            if self._step_count >= self.T_max:
+                return [self.eta_min for _ in self.optimizer.param_groups]
+        return would_be
+
+
 class TrainConfig(NamedTuple):
 
     """Value class that represents training configuration.
@@ -135,6 +149,7 @@ class TrainConfig(NamedTuple):
             return CosineAnnealingLR(optimizer, T_max=200)
         scheduler_class = {
             "cosine_anneal": CosineAnnealingLR,
+            "cosine_anneal_terminal": CosineAnnealTerminal,
             "step": StepLR,
             "exponential": ExponentialLR,
             "constant": ConstantLR,
@@ -143,9 +158,11 @@ class TrainConfig(NamedTuple):
         }[scheduler_type]
         kwargs = {
             "cosine_anneal": {"T_max": self.epoch_count},
+            "cosine_anneal_terminal": {"T_max": self.epoch_count},
         }.get(scheduler_type, {})
         kwarg_types = {
             "cosine_anneal": {"T_max": int},
+            "cosine_anneal_terminal": {"T_max": int},
             "step": {"step_size": int},
             "multistep": {"milestones": lambda milestones_str: [int(m) for m in milestones_str.split(",")]},
             "plateau": {"mode": str, "patience": int, "threshold_mode": str, "cooldown": int},
