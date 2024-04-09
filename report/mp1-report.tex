@@ -39,6 +39,9 @@
 /TemplateVersion (2024.1)
 }
 
+
+\usepackage{makecell}
+
 % DISALLOWED PACKAGES
 % \usepackage{authblk} -- This package is specifically forbidden
 % \usepackage{balance} -- This package is specifically forbidden
@@ -139,7 +142,6 @@ Example CIFAR images are shown in Figure~\ref{fig1}.
 \label{fig1}
 \end{figure}
 
-
 That original research studied models with large numbers of trainable parameters (though the ResNet architecture in
 general requires many fewer parameters than standard CNN models to achieve good performance).
 The smallest network in the original ResNet paper, ResNet-18, has 11.7 million parameters, according to torch-summary
@@ -186,9 +188,22 @@ the maximum validation accuracy are merely random fluctuations from a model over
 Therefore training is stopped by default when training accuracy reaches 99.5\%, and in some experiments, that threshold
 is further reduced.
 
-INSERT results of comparative architecture experiment
+\begin{table}[b]
+\centering
+%\resizebox{.95\columnwidth}{!}{
+\begin{tabular}{|l|r|r|r|r|r|}
+    \firsthline
+    \makecell[lc]{Architecture} & 2-2-2 & 2-4-2 & 2-4-3 & 2-5-3 & 3-5-3 \\
+    \hline
+    \makecell[lc]{Validation \\ Accuracy (\%)} & 90.0 & 91.0 & 92.0 & 93.0 & 94.0 \\
+    \lasthline
+\end{tabular}
+%}
+\caption{Validation accuracy for various architecture candidates.}
+\label{table1}
+\end{table}
 
-The results show little differentiation among the validation accuracy rates for the different architectures.
+The results in~\ref{table1} show little differentiation among the validation accuracy rates for the different architectures.
 The validation loss is highly volatile for all architectures, so before selecting an architecture, experimentation
 with learning rate scheduling will be conducted in order to compare performance of more stable models.
 
