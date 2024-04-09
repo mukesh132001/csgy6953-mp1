@@ -174,49 +174,61 @@ descriptor 2-2-2-2.
 The original ResNet research prefers sequences of at least two blocks.
 Architectures with four such block sequences have more than 5 million trainable parameters, thus candidate
 architectures for our task must contain at most three sequences.
-Based on these constraints, the following candidate architectures are evaluated herein: 2-2-2, 2-4-2, 2-5-2, 2-5-3,
+Based on these constraints, the following architectures are candidates for evaluation: 2-2-2, 2-4-2, 2-5-2, 2-5-3,
 and 3-5-3.
-The upstream codebase explicitly required four sequences, so it was adapted to support an arbitrary number of block
-sequences.
+Because the upstream codebase explicitly required a pipeline of four block sequences, it was adapted to support an
+arbitrary number of block sequences.
 
 For these initial experiments, hyperparameters and other training details are drawn from the original ResNet paper and
 the upstream repository defaults.
 The learning rate is set to 0.1 and models are trained for 40 epochs with Stochastic Gradient Descent (SGD) at a batch
 size of 128.
-Early experimentation showed that the training has a tendency to reach loss saturation, at which point improvements to
-the maximum validation accuracy are merely random fluctuations from a model overfitted to the training data.
-Therefore training is stopped by default when training accuracy reaches 99.5\%, and in some experiments, that threshold
-is further reduced.
+Early experimentation showed that at higher epochs, validation accuracy can stagnate while training accuracy continues
+to improve.
+As this is an indication of overfitting, these experiments implement early stopping of training when
+training accuracy reaches between 97.0\% and 99.5\%, depending on the experiment.
 
-\begin{table}[b]
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.99\textwidth]{loss-curves-5} % Reduce the figure size so that it is slightly narrower than the column.
+\caption{Training and validation loss by architecture with constant learning rate}
+\label{fig2}
+\end{figure*}
+
+\begin{table}[t]
 \centering
 %\resizebox{.95\columnwidth}{!}{
-\begin{tabular}{|l|r|r|r|r|r|}
+\begin{tabular}{|l|l|}
     \firsthline
-    \makecell[lc]{Architecture} & 2-2-2 & 2-4-2 & 2-4-3 & 2-5-3 & 3-5-3 \\
+    Arch & Val Acc    \\
     \hline
-    \makecell[lc]{Validation \\ Accuracy (\%)} & 90.0 & 91.0 & 92.0 & 93.0 & 94.0 \\
+    2-2-2 & 86.56\%    \\
+    2-4-2 & 84.74\%    \\
+    2-5-2 & 84.98\%    \\
+    2-5-3 & 85.32\%    \\
+    3-5-3 & 87.00\%    \\
     \lasthline
 \end{tabular}
 %}
-\caption{Validation accuracy for various architecture candidates.}
+\caption{Validation accuracy by architecture with constant learning rate}
 \label{table1}
 \end{table}
 
-The results in~\ref{table1} show little differentiation among the validation accuracy rates for the different architectures.
-The validation loss is highly volatile for all architectures, so before selecting an architecture, experimentation
-with learning rate scheduling will be conducted in order to compare performance of more stable models.
+The results of the initial architecure experiment are shown in Figure~\ref{fig2} and Table~\ref{table1}.
+The most stable validation loss behavior is observed in architectures 2-4-2 and 3-5-3, but 2-2-2 and 3-5-3
+have the greatest validation accuracy.
+Before selecting a single architecture, we will consider learning rate scheduling to compare performance
+with more stable loss trends.
 
 \subsection{Training Strategies}
 
 \subsubsection{Learning Rate Scheduling}
 
 The initial architecture experiments were conducted with a constant learning rate of 0.1.
-In the experiments below, this approach is compared to other learning rate scheduling approaches.
-Approaches under consideration are: step scheduling, as used by the original ResNet paper; cosine annealing, as
-implemented in the upstream codebase; and an adaptive scheduler that reduces the learning rate when validation loss
-plateaus.
-Training is stopped early if the training accuracy reaches 97.5\%.
+Other approaches under consideration are: step scheduling, as used by the original ResNet paper;
+cosine annealing, as implemented in the upstream codebase; and adaptive scheduling that reduces the learning rate
+when validation loss plateaus.
+For these experiments, training is stopped early if the training accuracy reaches 97.5\%.
 
 INSERT learning rate scheduler experiment results
 
