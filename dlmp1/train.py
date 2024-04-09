@@ -52,6 +52,19 @@ TRAIN_SET_STDEV = (0.2023, 0.1994, 0.2010)
 NAN = float("nan")
 Device = Union[str, torch.device]
 Criterion = Callable[[Tensor, Tensor], Tensor]
+DEFAULT_TRAIN_TRANSFORM = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToImage(),
+    transforms.ToDtype(torch.float32, scale=True),
+    transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
+])
+IDENTITY_TRAIN_TRANSFORM = transforms.Compose([
+    transforms.ToImage(),
+    transforms.ToDtype(torch.float32, scale=True),
+    transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
+])
+
 
 def get_test_set_transform() -> transforms.Transform:
     return transforms.Compose([
@@ -98,6 +111,7 @@ class TrainConfig(NamedTuple):
     optimizer_type: Literal["sgd", "adam"] = "sgd"
     sgd_momentum: float = 0.9
     weight_decay: float = 5e-4
+    augmentations: Optional[str] = "default"
     quiet: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -145,6 +159,37 @@ class TrainConfig(NamedTuple):
             params[k] = value_type(v)
         kwargs.update(params)
         return scheduler_class(optimizer, **kwargs)
+
+    @staticmethod
+    def augmenter(token: str) -> transforms.Transform:
+        token = str(token)
+        if token == "random_crop":
+            return transforms.RandomCrop(32, padding=4)
+        if token == "random_resized_crop":
+            return transforms.RandomResizedCrop(32, scale=(0.8, 1.0), ratio = (1.0, 1.0))
+        if token.startswith("rotate"):
+            token = token[len("rotate"):]
+            if not token:
+                token = "30"
+            max_angle = float(token)
+            return transforms.RandomRotation(degrees=max_angle)
+        raise ValueError(f"unsupported augmenter: {repr(token)}")
+
+    def create_train_transform(self) -> transforms.Transform:
+        if not self.augmentations:
+            return IDENTITY_TRAIN_TRANSFORM
+        if self.augmentations == "default":
+            return DEFAULT_TRAIN_TRANSFORM
+        augs = self.augmentations.split(";")
+        standard = [
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
+            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
+        ]
+        custom = [self.augmenter(token) for token in augs]
+        train_transform = transforms.Compose(standard + custom)
+        return train_transform
+
 
 
 def _truncate(dataset: torch.utils.data.Dataset, limit: int):
@@ -196,18 +241,23 @@ class Partitioning(NamedTuple):
                 val_proportion: float = 0.1,
                 truncate_train: Optional[int] = None,
                 truncate_val: Optional[int] = None,
+                transform_train: Optional[transforms.Transform] = ...,
                 random_seed: Optional[int] = None,
                 num_workers: int = 2,
                 quiet: bool = False) -> 'Partitioning':
         if not quiet:
             print(f"==> Preparing data; batch size: {batch_size_train} train, {batch_size_val} validation")
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
-            transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
-        ])
+        if transform_train is ... or transform_train is DEFAULT_TRAIN_TRANSFORM:
+            if not quiet:
+                print("using default training data augmentation (random crop, random flip)")
+            transform_train = DEFAULT_TRAIN_TRANSFORM
+        elif transform_train is None or transform_train is IDENTITY_TRAIN_TRANSFORM:
+            if not quiet:
+                print("using no training data augmentation")
+            transform_train = IDENTITY_TRAIN_TRANSFORM
+        else:
+            if not quiet:
+                print("using custom training data augmentation")
 
         transform_val = get_test_set_transform()
 
@@ -296,6 +346,7 @@ def restore(checkpoint_file: str, net: Optional[nn.Module] = None, quiet: bool =
         'train_config': checkpoint.get('train_config', {}),
     }
     return Restored(train_hist, val_hist, learning_rates, was_seeded, extras=extras)
+
 
 class EpochInference(NamedTuple):
 
