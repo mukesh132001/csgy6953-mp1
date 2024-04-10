@@ -1,0 +1,31 @@
+model 1/4  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+model 1/4 acc 0.92:  70%|███████   | 56/80 [21:32<09:14, 23.09s/it]
+training terminated early: training accuracy saturated (97.5%) at epoch 55 with learning rate 0.023730468750000004
+training duration: 21 minutes, 33 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-192709/1-ckpt-a9f40a4b.pth
+
+model 2/4  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.0);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+model 2/4 acc 0.91:  86%|████████▋ | 69/80 [26:39<04:14, 23.18s/it]
+training terminated early: training accuracy saturated (98.1%) at epoch 68 with learning rate 0.013348388671875001
+training duration: 26 minutes, 39 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-192709/2-ckpt-79af52d3.pth
+
+model 3/4  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.2);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+model 3/4 acc 0.91:  96%|█████████▋| 77/80 [30:20<01:10, 23.64s/it]
+training terminated early: training accuracy saturated (97.5%) at epoch 76 with learning rate 0.013348388671875001
+training duration: 30 minutes, 21 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-192709/3-ckpt-36ea8246.pth
+
+model 4/4  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.5);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+model 4/4 acc 0.90:  96%|█████████▋| 77/80 [30:17<01:10, 23.60s/it]
+training terminated early: training accuracy saturated (97.5%) at epoch 76 with learning rate 0.007508468627929688
+training duration: 30 minutes, 17 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-192709/4-ckpt-6723d73e.pth
+
+
+  validation acc  checkpoint                    title
+----------------  ----------------------------  ----------------------------------------------------------------------------------------------------------------------------------------
+          0.9178  checkpoint/ckpt-a9f40a4b.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+          0.9142  checkpoint/ckpt-79af52d3.pth  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.0);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+          0.912   checkpoint/ckpt-36ea8246.pth  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.2);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs
+          0.8968  checkpoint/ckpt-6723d73e.pth  3-5-3;h=Hyperparametry(k=3,ildr=0.2,dropout=0.5);k=3;lr=0.1;opt=sgd;sch=plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs

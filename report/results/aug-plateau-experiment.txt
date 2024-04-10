@@ -1,0 +1,12 @@
+model 1/1  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_resized_crop;rotate30;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 1/1 :   0%|          | 0/80 [00:00<?, ?it/s]Files already downloaded and verified
+/usr/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+model 1/1 acc 0.93: 100%|██████████| 80/80 [30:58<00:00, 23.23s/it]
+training duration: 30 minutes, 58 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240410-025925/1-ckpt-a5394271.pth
+
+
+  validation acc  checkpoint                    title
+----------------  ----------------------------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          0.9294  checkpoint/ckpt-a5394271.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_resized_crop;rotate30;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'

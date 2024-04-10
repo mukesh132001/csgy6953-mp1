@@ -1,0 +1,35 @@
+model 1/4  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 1/4 :   0%|          | 0/60 [00:00<?, ?it/s]Files already downloaded and verified
+/usr/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+model 1/4 acc 0.80: 100%|██████████| 60/60 [22:51<00:00, 22.86s/it]
+training duration: 22 minutes, 51 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-221323/1-ckpt-51829aae.pth
+
+model 2/4  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 2/4 :   0%|          | 0/60 [00:00<?, ?it/s]Files already downloaded and verified
+model 2/4 acc 0.81: 100%|██████████| 60/60 [23:01<00:00, 23.02s/it]
+training duration: 23 minutes, 0 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-221323/2-ckpt-7b6a9138.pth
+
+model 3/4  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 3/4 :   0%|          | 0/60 [00:00<?, ?it/s]Files already downloaded and verified
+model 3/4 acc 0.92:  88%|████████▊ | 53/60 [20:43<02:44, 23.46s/it]
+training terminated early: training accuracy saturated (98.1%) at epoch 52 with learning rate 0.0177978515625
+training duration: 20 minutes, 43 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-221323/3-ckpt-60b7f378.pth
+
+model 4/4  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 4/4 :   0%|          | 0/60 [00:00<?, ?it/s]Files already downloaded and verified
+model 4/4 acc 0.91:  52%|█████▏    | 31/60 [12:08<11:21, 23.51s/it]
+training terminated early: training accuracy saturated (97.6%) at epoch 30 with learning rate 0.07500000000000001
+training duration: 12 minutes, 8 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-221323/4-ckpt-0190e6cf.pth
+
+
+  validation acc  checkpoint                    title
+----------------  ----------------------------  ---------------------------------------------------------------------------------------------------------------------------------------
+          0.8028  checkpoint/ckpt-51829aae.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.8054  checkpoint/ckpt-7b6a9138.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.923   checkpoint/ckpt-60b7f378.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.9076  checkpoint/ckpt-0190e6cf.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'

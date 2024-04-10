@@ -1,0 +1,5 @@
+Files already downloaded and verified
+/usr/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+100%|██████████| 100/100 [00:02<00:00, 49.92it/s]
+94.02% is accuracy on test set (9402/10000)

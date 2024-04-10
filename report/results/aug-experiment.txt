@@ -1,0 +1,33 @@
+model 1/3  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug=None,opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 1/3 :   0%|          | 0/40 [00:00<?, ?it/s]==> Preparing data; batch size: 128 train, 100 validation
+using no training data augmentation
+Files already downloaded and verified
+/usr/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+model 1/3 acc 0.88:  80%|████████  | 32/40 [12:11<03:02, 22.87s/it]
+training terminated early: training accuracy saturated (99.8%) at epoch 31 with learning rate 0.0421875
+training duration: 12 minutes, 11 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-202357/1-ckpt-32fda02c.pth
+
+model 2/3  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_crop;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 2/3 :   0%|          | 0/40 [00:00<?, ?it/s]==> Preparing data; batch size: 128 train, 100 validation
+using custom training data augmentation
+Files already downloaded and verified
+model 2/3 acc 0.90: 100%|██████████| 40/40 [15:16<00:00, 22.91s/it]
+training duration: 15 minutes, 15 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-202357/2-ckpt-0bcf4d3c.pth
+
+model 3/3  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_resized_crop;rotate30;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 3/3 :   0%|          | 0/40 [00:00<?, ?it/s]==> Preparing data; batch size: 128 train, 100 validation
+using custom training data augmentation
+Files already downloaded and verified
+model 3/3 acc 0.88: 100%|██████████| 40/40 [20:41<00:00, 31.04s/it]
+training duration: 20 minutes, 41 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240409-202357/3-ckpt-28d39ea3.pth
+
+
+  validation acc  checkpoint                    title
+----------------  ----------------------------  ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          0.8814  checkpoint/ckpt-32fda02c.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug=None,opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.9042  checkpoint/ckpt-0bcf4d3c.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_crop;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.8798  checkpoint/ckpt-28d39ea3.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='random_resized_crop;rotate30;hflip',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'

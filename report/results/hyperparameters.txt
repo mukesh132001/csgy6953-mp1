@@ -1,0 +1,26 @@
+model 1/3  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 1/3 :   0%|          | 0/40 [00:00<?, ?it/s]Files already downloaded and verified
+/usr/lib/python3.10/multiprocessing/popen_fork.py:66: RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.
+  self.pid = os.fork()
+model 1/3 acc 0.89: 100%|██████████| 40/40 [10:53<00:00, 16.33s/it]
+training duration: 10 minutes, 52 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240410-030334/1-ckpt-87babee5.pth
+
+model 2/3  3-5-3;h=Hyperparametry(default);k=5;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 2/3 :   0%|          | 0/40 [00:00<?, ?it/s]Files already downloaded and verified
+model 2/3 acc 0.89: 100%|██████████| 40/40 [17:43<00:00, 26.58s/it]
+training duration: 17 minutes, 42 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240410-030334/2-ckpt-faefd651.pth
+
+model 3/3  3-5-3;h=Hyperparametry(default);k=7;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+model 3/3 :   0%|          | 0/40 [00:00<?, ?it/s]Files already downloaded and verified
+model 3/3 acc 0.89: 100%|██████████| 40/40 [29:21<00:00, 44.04s/it]
+training duration: 29 minutes, 21 seconds
+uploaded /content/gdrive/MyDrive/CS-GY 6953 DL/deep learning midterm project/checkpoints/model-selection/20240410-030334/3-ckpt-f67a3adf.pth
+
+
+  validation acc  checkpoint                    title
+----------------  ----------------------------  ---------------------------------------------------------------------------------------------------------------------------------------
+          0.8942  checkpoint/ckpt-87babee5.pth  3-5-3;h=Hyperparametry(default);k=3;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.8876  checkpoint/ckpt-faefd651.pth  3-5-3;h=Hyperparametry(default);k=5;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
+          0.8942  checkpoint/ckpt-f67a3adf.pth  3-5-3;h=Hyperparametry(default);k=7;lr=0.1;aug='default',opt=sgd;sch='plateau:factor=0.75;patience=5;threshold=0.05;threshold_mode=abs'
