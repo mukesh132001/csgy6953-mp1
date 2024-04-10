@@ -250,7 +250,7 @@ For these experiments, training is stopped early if the training accuracy reache
 \label{table2}
 \end{table}
 
-\begin{figure}[b]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.98\columnwidth]{experiment-lrschedule-3x2}
 \caption{Training and validation loss by architecture and learning rate scheduler.}
@@ -269,18 +269,6 @@ The validation accuracy of the 2-2-2 and 3-5-3 architectures is about the same,
 and we elect to use the 3-5-3 architecture (4.9 million parameters) for its expressiveness
 advantage, keeping in mind that the increased expressiveness means we must be vigilant
 with respect to overfit.
-
-
-\subsubsection{Optimizer}
-
-The optimizer algorithm plays a key role in training, and Adam was considered as an alternative to the default SGD\@.
-However, initial results showed Adam to be ineffective at the (somewhat large) learning rate $ 0.1 $.
-Validation loss is extremely volatile
-at that learning rate and training loss fails to converge.
-Using learning rate $ 0.01 $, there is some improvement, but the model still fails to achieve more than 60\% validation
-accuracy, even when trained to twice as many epochs as a model trained with SGD. More investigation is needed to
-determine whether our implementation was flawed, more hyperparameter tuning is required, or
-the algorithm is not well-suited to this type of model and/or dataset characteristics.
 
 \subsubsection{Regularization}
 
@@ -342,29 +330,42 @@ intensifying data augmentation does show some promise.
 The default configuration, in which training data is augmented by random crop and random horizontal flip,
 was compared to configurations with no augmentation and with more intense augmentation,
 adding random rotation of up to 30 degrees in either direction.
-The loss curves for each of these configuration are shown in Figure~\ref{fig4}
+The loss curves for each of these configurations are shown in Figure~\ref{fig4}
 As could be expected, the model trained with no augmentation performed worst,
 achieving 88.1\% validation accuracy, compared to 90.4\% accuracy from the default configuration.
 While the model with more intense augmentation achieved only 88.0\% accuracy, its
-validation loss curve tracks its training loss curve very closely.
-Training loss for the intense augmentation model converges at a level higher than observed in
-other experiments.
-It was observed in the learning rate scheduler experiment that the scheduler has an impact on
-how fast training loss is driven downward.
-While reduction of training loss paired with stagnating validation loss is suboptimal,
-if validation loss tracks training loss very closely, as it does for the model with intense augmentation,
-minimizing training loss in the later epochs could be beneficial.
+validation loss curve tracks its training loss curve very closely, implying that
+the model does not become overfitted to the training data in later epochs.
 
-To explore this potential, the cosine annealing scheduler was employed, and a model was
-trained to 80 epochs [to be continued].
+This suggested a potential avenue for improvement: use the cosine annealing learning rate scheduler,
+which had previously been rejected for being prone to overfitting, paired with intense
+data augmentation, which mitigates overfitting.
+To explore this potential, two models were trained out to 80 epochs, a baseline model with the
+default augmentation and the adaptive plateau scheduler adopted above, and another with
+intense augmentation and a cosine annealing scheduler.
+The cosine annealing scheduler was selected for the intense augmentation model because the
+loss curves of the learning rate scheduler experiment suggested that it minimizes training
+loss at later epochs.
+The intense augmentation model achieved validation accuracy of 94.4\%, while the default
+augmentation model achieved TBD\%.
+However, as shown in Figure~\ref{fig5}, at epochs beyond 40, some divergence of the training and validation loss curves
+is evident, so it is likely that the intense augmentation method does not totally resolve
+the overfitting problem.
 
 
-\begin{figure*}[b]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=0.70\textwidth]{experiment-aug1}
-\caption{Training and validation loss by architecture with constant learning rate}
+\caption{Training and validation loss by augmentation method}
 \label{fig4}
 \end{figure*}
+
+\begin{figure}[b]
+\centering
+\includegraphics[width=0.98\columnwidth]{experiment-tmp-80epoch-augtypes}
+\caption{Training and validation loss over 80 epochs with different augmentation and learning rate schedulers.}
+\label{fig5}
+\end{figure}
 
 
 
@@ -375,6 +376,7 @@ kernel size hyperparameter.
 The impact of other hyperparameters, such as the number of channels within blocks and the pool size in the average pool
 layer, is potentially worthy of consideration, but their values were fixed at the upstream defaults to reduce the
 search space for this investigation.
+
 The default kernel size is 3 in the upstream codebase, and the model trained with this kernel size achieved the
 greatest valiation accuracy, at TBD\%, while models trained with kernel sizes 5 achieved accuracies
 of TBD\% and TBD\% respectively.
