@@ -209,7 +209,7 @@ class TrainConfig(NamedTuple):
             transforms.Normalize(TRAIN_SET_MEAN, TRAIN_SET_STDEV),
         ]
         custom = [self.augmenter(token) for token in augs]
-        train_transform = transforms.Compose(standard + custom)
+        train_transform = transforms.Compose(custom + standard)
         return train_transform
 
 
