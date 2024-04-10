@@ -190,7 +190,7 @@ training accuracy reaches between 97.0\% and 99.5\%, depending on the experiment
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.99\textwidth]{loss-curves-5} % Reduce the figure size so that it is slightly narrower than the column.
+\includegraphics[width=0.99\textwidth]{loss-curves-5}
 \caption{Training and validation loss by architecture with constant learning rate}
 \label{fig2}
 \end{figure*}
@@ -299,8 +299,7 @@ before and after the block sequence pipeline, and between each sequence in the b
 Three dropout configuration are evaluated and compared to a zero-dropout configuration.
 For the dropout configurations, the input layer dropout rate is set at 20\%, while the hidden layer
 dropout layers are assigned rates of 0\%, 20\%, and 50\%.
-
-For the dropout experiment, models were trained up to 80 epochs, instead of the 40 epoch limit in above experiments,
+Models with dropout were trained up to 80 epochs, instead of the 40 epoch limit in above experiments,
 to account for how dropout may delay convergence.
 Early stopping was imposed at training accuracy of 97.5\%.
 The validation accuracies under varying dropout configurations, displayed in Table~\ref{table3},
@@ -338,20 +337,51 @@ loss.
 This does not rule out more granular investigation of weight decay parameter values, but does not
 motivate us to pursue an alternative to the upstream default.
 
+Unlike the experiments on dropout and weight decay, investigation into regularization by
+intensifying data augmentation does show some promise.
+The default configuration, in which training data is augmented by random crop and random horizontal flip,
+was compared to configurations with no augmentation and with more intense augmentation,
+adding random rotation of up to 30 degrees in either direction.
+The loss curves for each of these configuration are shown in Figure~\ref{fig4}
+As could be expected, the model trained with no augmentation performed worst,
+achieving 88.1\% validation accuracy, compared to 90.4\% accuracy from the default configuration.
+While the model with more intense augmentation achieved only 88.0\% accuracy, its
+validation loss curve tracks its training loss curve very closely.
+Training loss for the intense augmentation model converges at a level higher than observed in
+other experiments.
+It was observed in the learning rate scheduler experiment that the scheduler has an impact on
+how fast training loss is driven downward.
+While reduction of training loss paired with stagnating validation loss is suboptimal,
+if validation loss tracks training loss very closely, as it does for the model with intense augmentation,
+minimizing training loss in the later epochs could be beneficial.
+
+To explore this potential, the cosine annealing scheduler was employed, and a model was
+trained to 80 epochs [to be continued].
+
+
+\begin{figure*}[b]
+\centering
+\includegraphics[width=0.70\textwidth]{experiment-aug1}
+\caption{Training and validation loss by architecture with constant learning rate}
+\label{fig4}
+\end{figure*}
+
+
+
 \subsection{Hyperparameters}
 
-The 2-2-2 architecture selected from the above analysis was evaluated with three different values for the convolution
-kernel size within each block.
+Convolution kernel sizes of 3, 5, and 7 were comparatively evaluated to establish the impact of the
+kernel size hyperparameter.
 The impact of other hyperparameters, such as the number of channels within blocks and the pool size in the average pool
-layer, may be worthy of consideration, but their values were fixed at the upstream defaults to reduce the search space
-for this investigation.
-Experiments were conducted with models trained with convolution kernel sizes of 3 (the default), 5, and 7, and the
-results are shown below.
-
-INSERT convolution kernel size experiment results
-
-Kernel size 3 is selected as the optimal kernel size because it achieve the highest validation accuracy.
-The effect of varying the kernel size is not large, possibly because the CIFAR image size is quite small (32x32 pixels).
+layer, is potentially worthy of consideration, but their values were fixed at the upstream defaults to reduce the
+search space for this investigation.
+The default kernel size is 3 in the upstream codebase, and the model trained with this kernel size achieved the
+greatest valiation accuracy, at TBD\%, while models trained with kernel sizes 5 achieved accuracies
+of TBD\% and TBD\% respectively.
+The training and validation loss curves are similar for all kernel sizes, with the training and validation
+loss diverging slightly more at later epochs for kernel sizes 5 and 7.
+The effect of varying the kernel size is not large, which is counterintuitive, considering the
+the small dimensions of the CIFAR images.
 
 \section{Results}
 
