@@ -1,12 +1,12 @@
-"""Some helper functions for PyTorch, including:
-    - get_mean_and_std: calculate the mean and std value of dataset.
-    - msr_init: net parameter initialization.
-    - progress_bar: progress bar mimic xlua.progress.
+"""Utility functions.
 """
 
+import io
 import base64
 import datetime
+import contextlib
 from pathlib import Path
+from typing import ContextManager
 
 import numpy as np
 
@@ -51,3 +51,13 @@ def get_repo_root() -> Path:
 
 def timestamp() -> str:
     return datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+@contextlib.contextmanager
+def suppress_stdout(disabled: bool = False) -> ContextManager[io.StringIO]:
+    buffer = io.StringIO()
+    if disabled:
+        yield buffer
+    else:
+        with contextlib.redirect_stdout(buffer):
+            yield buffer

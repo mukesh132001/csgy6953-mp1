@@ -292,7 +292,9 @@ class Partitioning(NamedTuple):
 
         data_dir = str(dlmp1.utils.get_repo_root() / "data")
 
-        full_trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True)
+        with dlmp1.utils.suppress_stdout(disabled=not quiet):
+            # this normally prints on stdout, which can interfere with our progress bar
+            full_trainset = torchvision.datasets.CIFAR10(root=data_dir, train=True, download=True)
         rng = None if random_seed is None else torch.Generator().manual_seed(random_seed)
         trainset, valset = torch.utils.data.random_split(full_trainset, [1 - val_proportion, val_proportion], generator=rng)
         trainset = TransformedDataset(trainset, transform_train)
