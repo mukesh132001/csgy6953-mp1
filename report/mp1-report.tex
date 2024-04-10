@@ -292,13 +292,13 @@ Subsequent minor increases in validation accuracy at that point are likely the r
 model becomes overfitted to the training data.
 
 To reduce overfitting, several strategies for regularization are considered:
-introducing dropout into training, varying training data by augmentation, and increasing weight decay.
-To test the effect of dropout, multiple dropout ``layers'' are inserted into the model at the input layer, before and
-after the block sequence pipeline, and between each sequence in the block sequence pipeline.
-Two dropout strategies are evaluated; in both cases, the input layer dropout rate is 20\%, and dropout rates of 20\%
-and 50\% for the hidden layers are evaluated.
-To test the effect of weight decay, the upstream codebase's default value of $ 0.0005 $ is compared to values of
-$ 0 $, $ 0.00275 $, and $ 0.005 $.
+introducing dropout into training, increasing weight decay, and varying training data by augmentation.
+
+To test the effect of dropout, multiple dropout ``layers'' are inserted into the model at the input layer,
+before and after the block sequence pipeline, and between each sequence in the block sequence pipeline.
+Three dropout configuration are evaluated and compared to a zero-dropout configuration.
+For the dropout configurations, the input layer dropout rate is set at 20\%, while the hidden layer
+dropout layers are assigned rates of 0\%, 20\%, and 50\%.
 
 For the dropout experiment, models were trained up to 80 epochs, instead of the 40 epoch limit in above experiments,
 to account for how dropout may delay convergence.
@@ -328,19 +328,15 @@ configuration.
 \label{table3}
 \end{table}
 
-INSERT weight decay experiment results
-
-
-Additional data augmentation for the purpose of regularization is potentially worth investigating; the current
-implementation includes random horizontal flip and random crop with 4 pixels of padding.
-
-Experiments varying weight decay from the default  did not yield any useful insights.
-The model trained with default weight decay $ 0.0005 $ achieved 92.3\% validation accuracy.
+Experiments varying weight decay from the default did not yield any useful insights.
+A model trained with the default weight decay from the upstream repository, $0.0005 $,
+was compared to models with weight decay values of $ 0.0 $, $ 0.00275 $, and $ 0.005 $.
+The model trained with default weight decay achieved 92.3\% validation accuracy.
 The model with zero decay performed slightly worse than the default, at 90.7\% accuracy, and
 models with greater weight decay achieved about 80\% accuracy, with highly volatile validation
 loss.
 This does not rule out more granular investigation of weight decay parameter values, but does not
-motivate us to pursue an alternative weight decay.
+motivate us to pursue an alternative to the upstream default.
 
 \subsection{Hyperparameters}
 
