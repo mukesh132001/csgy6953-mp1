@@ -334,6 +334,14 @@ INSERT weight decay experiment results
 Additional data augmentation for the purpose of regularization is potentially worth investigating; the current
 implementation includes random horizontal flip and random crop with 4 pixels of padding.
 
+Experiments varying weight decay from the default  did not yield any useful insights.
+The model trained with default weight decay $ 0.0005 $ achieved 92.3\% validation accuracy.
+The model with zero decay performed slightly worse than the default, at 90.7\% accuracy, and
+models with greater weight decay achieved about 80\% accuracy, with highly volatile validation
+loss.
+This does not rule out more granular investigation of weight decay parameter values, but does not
+motivate us to pursue an alternative weight decay.
+
 \subsection{Hyperparameters}
 
 The 2-2-2 architecture selected from the above analysis was evaluated with three different values for the convolution
