@@ -221,6 +221,20 @@ class TrainConfigTest(TestCase):
         scheduler = CosineAnnealTerminal(opt, T_max=60, eta_min=0.001)
         _run_schedule(opt, scheduler, epochs=80, verbose=True)
 
+    def test_is_acc_improve(self):
+        default = TrainConfig()
+        with self.subTest():
+            self.assertTrue(default.is_acc_improvement(97.05, 97))
+        with self.subTest():
+            self.assertFalse(default.is_acc_improvement(56.5, 56.5))
+        with self.subTest():
+            self.assertFalse(default.is_acc_improvement(55.5, 56.0))
+        thresh = TrainConfig(acc_pct_improve_threshold=0.25)
+        with self.subTest():
+            self.assertTrue(thresh.is_acc_improvement(85.65, 85.25))
+        with self.subTest():
+            self.assertFalse(thresh.is_acc_improvement(85.35, 85.25))
+
 
 class PartitioningTest(TestCase):
 

@@ -127,10 +127,17 @@ class TrainConfig(NamedTuple):
     sgd_momentum: float = 0.9
     weight_decay: float = 5e-4
     augmentations: Optional[str] = "default"
+    acc_pct_improve_threshold: Optional[float] = None
     quiet: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return self._asdict()
+
+    def is_acc_improvement(self, acc_pct: float, best_acc_pct: float) -> bool:
+        if self.acc_pct_improve_threshold is None:
+            return acc_pct > best_acc_pct
+        else:
+            return (acc_pct - best_acc_pct) >= self.acc_pct_improve_threshold
 
     def create_optimizer(self, parameters: Iterator[Parameter]) -> Optimizer:
         if self.optimizer_type == "sgd":
@@ -512,7 +519,7 @@ def perform(model_provider: ModelFactory,
 
         # Save checkpoint.
         acc = 100. * inf_result.accuracy()
-        if acc > best_acc:
+        if config.is_acc_improvement(acc, best_acc):
             state = {
                 'net': net.state_dict(),
                 'acc': acc,
