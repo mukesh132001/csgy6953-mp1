@@ -52,9 +52,9 @@ class TaggedModelFactory:
         return self.creator()
 
 
-def _model_factory(numblocks_seq: Sequence[int],
-                   hyperparametry: Hyperparametry,
-                   conv_kernel_size: int = 3) -> ModelFactory:
+def create_model_factory(numblocks_seq: Sequence[int],
+                         hyperparametry: Hyperparametry,
+                         conv_kernel_size: int = 3) -> ModelFactory:
     def _create_model():
         block_specs = []
         for index, numblocks in enumerate(numblocks_seq):
@@ -75,7 +75,7 @@ def iterate_model_factories(numblocks_specs: Iterable[Sequence[int]],
     for numblocks_seq in numblocks_specs:
         for hyperparametry in (hyperparametries or [Hyperparametry()]):
             for block_conv_kernel_size in block_conv_kernel_sizes:
-                yield _model_factory(numblocks_seq, hyperparametry, conv_kernel_size=block_conv_kernel_size)
+                yield create_model_factory(numblocks_seq, hyperparametry, conv_kernel_size=block_conv_kernel_size)
 
 
 class Selectable(NamedTuple):
