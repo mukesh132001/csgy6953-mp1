@@ -198,7 +198,7 @@ To avoid the overfitting that comes with such a divergence, a policy was imposed
 training was stopped early if training accuracy reached between 97.5\% and 99.5\%,
 depending on the experiment.
 
-\begin{table}[t]
+\begin{table}[b]
 \centering
 %\resizebox{.95\columnwidth}{!}{
 \begin{tabular}{|l|r|}
@@ -234,7 +234,7 @@ cosine annealing, as implemented in the upstream codebase;
 and adaptive scheduling that reduces the learning rate when validation loss plateaus.
 For these experiments, training is stopped early if the training accuracy reaches 97.5\%.
 
-\begin{table}[t]
+\begin{table}[b]
 \centering
 %\resizebox{.95\columnwidth}{!}{
 \begin{tabular}{|l|r|}
@@ -254,7 +254,7 @@ For these experiments, training is stopped early if the training accuracy reache
 \label{table2}
 \end{table}
 
-\begin{table}[t]
+\begin{table}[b]
 \centering
 %\resizebox{.95\columnwidth}{!}{
 \begin{tabular}{|r|r|r|}
@@ -273,11 +273,24 @@ For these experiments, training is stopped early if the training accuracy reache
 \end{table}
 
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=0.98\columnwidth]{experiment-lrschedule-3x2}
+\includegraphics[width=0.8\textwidth]{experiment-lrschedule-2x3}
 \caption{Training and validation loss by architecture and learning rate scheduler.}
 \label{fig3}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\columnwidth]{experiment-heavy-aug}
+\caption{Training and validation loss under heavy augmentation}
+\label{fig4}
+\end{figure}
+
+\begin{figure}[t]
+\includegraphics[width=0.98\columnwidth]{experiment-80epoch-augtypes}
+\caption{Training and validation loss over 80 epochs with different augmentation and learning rate schedulers.}
+\label{fig5}
 \end{figure}
 
 
@@ -375,20 +388,6 @@ augmentation inducing greater training loss than the default augmentation induce
 while the same gradient characteristics were still present, so the models learned
 in the same way.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.70\textwidth]{experiment-aug1}
-\caption{Training and validation loss by augmentation method}
-\label{fig4}
-\end{figure*}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.98\columnwidth]{experiment-80epoch-augtypes}
-\caption{Training and validation loss over 80 epochs with different augmentation and learning rate schedulers.}
-\label{fig5}
-\end{figure}
-
 \subsection{Hyperparameters}
 
 Convolution kernel sizes of 3, 5, and 7 were comparatively evaluated to establish the impact of the
@@ -432,6 +431,7 @@ This suggests either that those authors had performed adequate tuning already or
 with more granular and systematic examination, is warranted.
 Grid search with cross validation would be an appropriate technique for such exploration, given sufficient time and
 computing resources.
+
 
 \bibliography{aaai24}
 
