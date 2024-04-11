@@ -363,8 +363,8 @@ heavy augmentation and a cosine annealing scheduler.
 
 The heavy augmentation model achieves validation accuracy of 94.4\%, while the default
 augmentation model achieves 94.2\%.
-However, as Figure~\ref{fig5} shows, the training and validation loss curves diverge under
-both default and heavy augmentation.
+However, as Figure~\ref{fig5} shows, the training and validation loss curves eventually
+diverge under both default and heavy augmentation.
 The divergence only shows up in the heavy augmentation model after 40 epochs.
 
 That divergence and the similar validation accuracy scores suggest that the heavy augmentation
@@ -376,15 +376,16 @@ in the same way.
 
 \subsection{Hyperparameters}
 
-Convolution kernel sizes of 3, 5, and 7 were comparatively evaluated to establish the impact of the
-kernel size hyperparameter.
-The impact of other hyperparameters, such as the number of channels within blocks and the pool size in the average pool
-layer, is potentially worthy of consideration, but their values were fixed at the upstream defaults to reduce the
+Kernel sizes of 3, 5, and 7 for the convolution kernels within blocks were comparatively evaluated to establish the impact of the
+block kernel size hyperparameter.
+The impact of other hyperparameters, such as initial convolution kernel size,
+the number of channels within blocks, and the pool size in the average pool
+layer, are potentially worthy of consideration, but their values were fixed at the upstream defaults to reduce the
 search space for this investigation.
 
 The default kernel size is 3 in the upstream codebase, and the model trained with this kernel size achieved the
-greatest valiation accuracy, at TBD\%, while models trained with kernel sizes 5 achieved accuracies
-of TBD\% and TBD\% respectively.
+greatest valiation accuracy, at 89.4\%, while models trained with kernel sizes 5 achieved accuracies
+of 88.8\% and 89.4\% respectively.
 The training and validation loss curves are similar for all kernel sizes, with the training and validation
 loss diverging slightly more at later epochs for kernel sizes 5 and 7.
 The effect of varying the kernel size is not large, which is counterintuitive, considering the
@@ -393,11 +394,12 @@ the small dimensions of the CIFAR images.
 \section{Results}
 
 The analysis above suggests that a suitable choice of architecture, training strategy, and hyperparameters
-is as follows:
+is the following:
+
 \begin{itemize}
     \item 3-5-3 architecture
     \item adaptive-plateau learning rate scheduler
-    \item SGD optimizer
+    \item no dropout
     \item weight decay $ 0.0005 $
     \item random crop and random flip data augmentation
     \item convolution kernel size $ 3 $
@@ -417,7 +419,6 @@ This suggests either that those authors had performed adequate tuning already or
 with more granular and systematic examination, is warranted.
 Grid search with cross validation would be an appropriate technique for such exploration, given sufficient time and
 computing resources.
-
 
 \bibliography{aaai24}
 
