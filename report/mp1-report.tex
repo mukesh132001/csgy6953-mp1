@@ -347,14 +347,16 @@ intensifying data augmentation did show initial promise.
 The default configuration, in which training data is augmented by random crop and random horizontal flip,
 was compared to configurations with no augmentation and with heavier augmentation,
 adding random rotation of up to 30 degrees in either direction.
-The loss curves for each of these configurations are shown in Figure~\ref{fig4}
 As could be expected, the model trained with no augmentation performed worst,
-achieving 88.1\% validation accuracy, compared to 90.4\% accuracy from the default configuration.
-While the model with heavier augmentation achieved only 88.0\% accuracy, its
-validation loss curve tracks its training loss curve very closely, implying that
-the model does not become overfitted to the training data in later epochs.
+achieving 88.1\% validation accuracy, compared to 90.4\% accuracy for the default configuration.
+The loss curves for the configuration with no augmentation and default augmentation
+are similar to those seen before, but the loss curves of the heavy augmentation
+configuration, shown in Figure~\ref{fig4}, have an interesting feature.
+Though that model achieves only 88.0\% accuracy, its
+validation loss curve tracks its training loss curve very closely, suggesting that
+the heavy augmentation makes the model less prone to overfitting.
 
-This suggested a potential avenue for improvement: use the cosine annealing learning rate scheduler,
+This points to a potential avenue for improvement: use the cosine annealing learning rate scheduler,
 which had previously been rejected for being prone to overfitting, paired with heavy
 data augmentation, which mitigates overfitting.
 To explore this potential, two models were trained out to 80 epochs, a baseline model with the
