@@ -165,6 +165,13 @@ of loss curve trends.
 
 \subsection{Architecture}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.99\textwidth]{loss-curves-5}
+\caption{Training and validation loss by architecture with constant learning rate}
+\label{fig2}
+\end{figure*}
+
 Our model definition code implements the core ResNet feature of convolutional layers with skip connections as a
 pipeline of block sequences, where a block contains two convolutional layers, each with batch normalization, plus the
 skip connection.
@@ -190,13 +197,6 @@ stagnate while training accuracy continued to improve.
 To avoid the overfitting that comes with such a divergence, a policy was imposed where
 training was stopped early if training accuracy reached between 97.5\% and 99.5\%,
 depending on the experiment.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.99\textwidth]{loss-curves-5}
-\caption{Training and validation loss by architecture with constant learning rate}
-\label{fig2}
-\end{figure*}
 
 \begin{table}[t]
 \centering
@@ -234,7 +234,7 @@ cosine annealing, as implemented in the upstream codebase;
 and adaptive scheduling that reduces the learning rate when validation loss plateaus.
 For these experiments, training is stopped early if the training accuracy reaches 97.5\%.
 
-\begin{table}[b]
+\begin{table}[t]
 \centering
 %\resizebox{.95\columnwidth}{!}{
 \begin{tabular}{|l|r|}
@@ -253,6 +253,25 @@ For these experiments, training is stopped early if the training accuracy reache
 \caption{Validation accuracy by architecture and Learning Rate Scheduler}
 \label{table2}
 \end{table}
+
+\begin{table}[t]
+\centering
+%\resizebox{.95\columnwidth}{!}{
+\begin{tabular}{|r|r|r|}
+    \firsthline
+    \makecell{Input Layer \\ Dropout \% }  & \makecell{Hidden Layer \\ Dropout \% } & Val Acc \%    \\
+    \hline
+    0 & 0 & 91.8    \\
+    20 & 0 & 91.4    \\
+    20 & 20 & 91.2    \\
+    20 & 50 & 89.7    \\
+    \lasthline
+\end{tabular}
+%}
+\caption{Validation accuracy under varying dropout rates. The input layer and hidden layer dropout rates are varied between 0 and 50\%.}
+\label{table3}
+\end{table}
+
 
 \begin{figure}[t]
 \centering
@@ -291,22 +310,24 @@ the algorithm is not well-suited to this type of model and/or dataset characteri
 
 A suboptimal trend observed in the experiments above is the training loss continuing to decrease in later
 epochs while the validation accuracy stagnates.
-A possible explanation of this phenomenon is that the gradient reaches a local minimum, and further training
-refines the model within that local neighborhood and improvements are generalized.
+A possible explanation of this divergence is that the gradient reaches a local minimum, and further training
+refines the model within that local neighborhood, resulting in improvements that do not generalize.
 Subsequent minor increases in validation accuracy at that point are likely the result of random fluctuations as the
 model becomes overfitted to the training data.
 
-To reduce overfitting, several strategies for regularization are considered:
+To reduce overfitting, several strategies for regularization were considered:
 introducing dropout into training, increasing weight decay, and varying training data by augmentation.
 
+\textit{Dropout.}
 To test the effect of dropout, multiple dropout ``layers'' are inserted into the model at the input layer,
 before and after the block sequence pipeline, and between each sequence in the block sequence pipeline.
-Three dropout configuration are evaluated and compared to a zero-dropout configuration.
-For the dropout configurations, the input layer dropout rate is set at 20\%, while the hidden layer
-dropout layers are assigned rates of 0\%, 20\%, and 50\%.
+Three dropout configurations were evaluated and compared to a zero-dropout configuration.
+Among the dropout configurations, the input layer dropout rate was set at 20\%, while the hidden layer
+dropout layers were assigned rates of 0\%, 20\%, and 50\%.
 Models with dropout were trained up to 80 epochs, instead of the 40 epoch limit in above experiments,
 to account for how dropout may delay convergence.
 Early stopping was imposed at training accuracy of 97.5\%.
+
 The validation accuracies under varying dropout configurations, displayed in Table~\ref{table3},
 are not substantially different, and the configuration with no dropout achieves maximum validation accuracy.
 The configuration in which the input layer dropout rate is 20\% but hidden layers have no dropout
@@ -314,25 +335,7 @@ is a close second, and it is worthy of consideration because the model may have 
 representation of the input, but there is not enough evidence to deviate from the default zero-dropout
 configuration.
 
-\begin{table}[b]
-\centering
-%\resizebox{.95\columnwidth}{!}{
-\begin{tabular}{|l|l|l|}
-    \firsthline
-    Input \% & Hidden \% & Val Acc \%    \\
-    \hline
-    0 & 0 & 91.8    \\
-    20 & 0 & 91.4    \\
-    20 & 20 & 91.2    \\
-    20 & 50 & 89.7    \\
-    \lasthline
-\end{tabular}
-%}
-\caption{Validation accuracy under varying dropout rates. The input layer and hidden layer dropout rates are varied between 0 and 50\%.}
-\label{table3}
-\end{table}
-
-Experiments varying weight decay from the default did not yield any useful insights.
+\textit{Weight Decay.} Experiments varying weight decay from the default did not yield any useful insights.
 A model trained with the default weight decay from the upstream repository, $0.0005 $,
 was compared to models with weight decay values of $ 0.0 $, $ 0.00275 $, and $ 0.005 $.
 The model trained with default weight decay achieved 92.3\% validation accuracy.
@@ -342,7 +345,7 @@ loss.
 This does not rule out more granular investigation of weight decay parameter values, but does not
 motivate us to pursue an alternative to the upstream default.
 
-Unlike the experiments on dropout and weight decay, investigation into regularization by
+\textit{Data Augmentation.} Unlike the experiments on dropout and weight decay, investigation into regularization by
 intensifying data augmentation does show some promise.
 The default configuration, in which training data is augmented by random crop and random horizontal flip,
 was compared to configurations with no augmentation and with heavier augmentation,
@@ -379,7 +382,7 @@ in the same way.
 \label{fig4}
 \end{figure*}
 
-\begin{figure}[b]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.98\columnwidth]{experiment-80epoch-augtypes}
 \caption{Training and validation loss over 80 epochs with different augmentation and learning rate schedulers.}
