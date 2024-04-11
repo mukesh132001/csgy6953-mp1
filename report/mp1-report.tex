@@ -124,7 +124,7 @@
     A model with ResNet architecture and less than 5 million trainable parameters is herein designed for the task of
     image classification.
     The model is trained and evaluated on the CIFAR-10 dataset, which contains very small images across ten classes.
-    Code is available at https://github.com/mike10004/csgy6953-mp1.
+    Model definition, training, and evaluation code is available at https://github.com/mike10004/csgy6953-mp1.
 \end{abstract}
 
 \section{Overview}
@@ -144,21 +144,23 @@ Example CIFAR images are shown in Figure~\ref{fig1}.
 
 That original research studied models with large numbers of trainable parameters (though the ResNet architecture in
 general requires many fewer parameters than standard CNN models to achieve good performance).
-The smallest network in the original ResNet paper, ResNet-18, has 11.7 million parameters, according to torch-summary
-analysis of the PyTorch ResNet implementation.
+The smallest network in the original ResNet paper, ResNet-18, has 11.7 million parameters, according to
+analysis of the PyTorch ResNet implementation by the Python package \textit{torch-summary}.
 
-This research focuses on designing, training, and evaluating a model with ResNet architecture that has under five
-million parameters, aiming to achieve high accuracy on CIFAR-10.
+Documented herein is an effort to design and train a model with ResNet architecture that has under five
+million parameters, with the objective of high accuracy on CIFAR-10.
 Using model definition and training code adapted from a reference implementation~\cite{kl:2021}, model
-hyperparameters and training strategies are determined through experimentation on a validation set.
+hyperparameters and training strategies were determined through experimentation on a validation set.
 The final model produced from this process achieves accuracy of 92.1\% on the CIFAR-10 test dataset.
 
 \section{Methodology}
 
-To design the optimal model for the task, a series of experiments is performed to determine the best architecture,
-hyperparameters, and training strategies such as regularization, learning rate scheduling, and data augmentation.
-The CIFAR-10 training dataset is split into 90\% for training and 10\% for validation.
-Alternatives are evaluated based on quantitative metrics such as validation accuracy as well as qualitative assessment
+To design the optimal model for the classification task, a series of experiments was performed to
+determine the best architecture, training strategies, and hyperparameters.
+The types of training strategies considered included learning rate scheduling, an alternative optimizer,
+and various regularization techniques.
+For all experiments, the 50k-image CIFAR-10 training dataset was split into 90\% for training and 10\% for validation.
+Alternatives were evaluated based on quantitative metrics such as validation accuracy as well as qualitative assessment
 of loss curve trends.
 
 \subsection{Architecture}
@@ -171,22 +173,23 @@ given model architecture.
 For example, the ResNet-18 model has four block sequences, each of length 2, and can be identified by the architecture
 descriptor 2-2-2-2.
 
-The original ResNet research prefers sequences of at least two blocks.
+The original ResNet research exclusively defines pipelines with sequences of at least two blocks.
 Architectures with four such block sequences have more than 5 million trainable parameters, thus candidate
-architectures for our task must contain at most three sequences.
-Based on these constraints, the following architectures are candidates for evaluation: 2-2-2, 2-4-2, 2-5-2, 2-5-3,
-and 3-5-3.
-Because the upstream codebase explicitly required a pipeline of four block sequences, it was adapted to support an
+architectures for our constraints must contain at most three sequences.
+Based on these constraints, the following architectures are candidates for evaluation:
+2-2-2, 2-4-2, 2-5-2, 2-5-3, and 3-5-3.
+Because the upstream codebase explicitly defined a pipeline of four block sequences, it was adapted to support an
 arbitrary number of block sequences.
 
 For these initial experiments, hyperparameters and other training details are drawn from the original ResNet paper and
 the upstream repository defaults.
-The learning rate is set to 0.1 and models are trained for 40 epochs with Stochastic Gradient Descent (SGD) at a batch
-size of 128.
-Early experimentation showed that at higher epochs, validation accuracy can stagnate while training accuracy continues
-to improve.
-As this is an indication of overfitting, these experiments implement early stopping of training when
-training accuracy reaches between 97.0\% and 99.5\%, depending on the experiment.
+The learning rate is set to $ 0.1 $ and models are trained for 40 epochs with
+Stochastic Gradient Descent (SGD) at a batch size of 128.
+Early experimentation showed that at higher epochs, validation accuracy would often
+stagnate while training accuracy continued to improve.
+To avoid the overfitting that comes with such a divergence, a policy was imposed where
+training was stopped early if training accuracy reached between 97.5\% and 99.5\%,
+depending on the experiment.
 
 \begin{figure*}[t]
 \centering
@@ -198,15 +201,15 @@ training accuracy reaches between 97.0\% and 99.5\%, depending on the experiment
 \begin{table}[t]
 \centering
 %\resizebox{.95\columnwidth}{!}{
-\begin{tabular}{|l|l|}
+\begin{tabular}{|l|r|}
     \firsthline
-    Arch & Val Acc    \\
+    Arch & Val Acc \%    \\
     \hline
-    2-2-2 & 86.56\%    \\
-    2-4-2 & 84.74\%    \\
-    2-5-2 & 84.98\%    \\
-    2-5-3 & 85.32\%    \\
-    3-5-3 & 87.00\%    \\
+    2-2-2 & 86.6    \\
+    2-4-2 & 84.7    \\
+    2-5-2 & 85.0    \\
+    2-5-3 & 85.3    \\
+    3-5-3 & 87.0    \\
     \lasthline
 \end{tabular}
 %}
@@ -214,20 +217,21 @@ training accuracy reaches between 97.0\% and 99.5\%, depending on the experiment
 \label{table1}
 \end{table}
 
-The results of the initial architecure experiment are shown in Figure~\ref{fig2} and Table~\ref{table1}.
-The most stable validation loss behavior is observed in architectures 2-4-2 and 3-5-3, but 2-2-2 and 3-5-3
+The results of the initial architecure experiment are shown in Table~\ref{table1}, and
+the training and validation loss curves are shown in Figure~\ref{fig2}.
+The most stable validation loss behavior was observed in architectures 2-4-2 and 3-5-3, but 2-2-2 and 3-5-3
 have the greatest validation accuracy.
 Before selecting a single architecture, we will consider learning rate scheduling to compare performance
-with more stable loss trends.
+of models that show more stable loss trends.
 
 \subsection{Training Strategies}
 
 \subsubsection{Learning Rate Scheduling}
 
 The initial architecture experiments were conducted with a constant learning rate of 0.1.
-Other approaches under consideration are: step scheduling, as used by the original ResNet paper;
-cosine annealing, as implemented in the upstream codebase; and adaptive scheduling that reduces the learning rate
-when validation loss plateaus.
+Other approaches under consideration include: step scheduling, as used by the original ResNet paper;
+cosine annealing, as implemented in the upstream codebase;
+and adaptive scheduling that reduces the learning rate when validation loss plateaus.
 For these experiments, training is stopped early if the training accuracy reaches 97.5\%.
 
 \begin{table}[b]
@@ -265,10 +269,23 @@ The cosine annealing scheduler shows a strong downward trend in training loss wh
 stays stagnant.
 This suggests that the cosine annealing scheduler is prone to overfitting, so the
 adaptive-plateau scheduler will be selected by default for subsequent experiments.
+
 The validation accuracy of the 2-2-2 and 3-5-3 architectures is about the same,
-and we elect to use the 3-5-3 architecture (4.9 million parameters) for its expressiveness
+and we elect to use the 3-5-3 architecture, which has 4.9 million parameters, for its expressiveness
 advantage, keeping in mind that the increased expressiveness means we must be vigilant
 with respect to overfit.
+
+\subsubsection{Optimizer}
+
+The optimizer algorithm plays a key role in training, and Adam was considered as an alternative to the default SGD\@.
+However, initial results showed Adam to be ineffective at the (somewhat large) learning rate $ 0.1 $.
+Validation loss was extremely volatile
+at that learning rate and training loss did not show a stable trend.
+Using learning rate $ 0.01 $, there was some improvement, but the model still fails to achieve more than 65\% validation
+accuracy, even when trained to twice as many epochs as a model trained with SGD\@.
+More investigation is needed to
+determine whether our implementation was flawed, more hyperparameter tuning is required, or
+the algorithm is not well-suited to this type of model and/or dataset characteristics.
 
 \subsubsection{Regularization}
 
