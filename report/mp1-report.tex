@@ -138,7 +138,7 @@ Example CIFAR images are shown in Figure~\ref{fig1}.
 \begin{figure}[b]
 \centering
 \includegraphics[width=0.95\columnwidth]{cifar-example-images}
-\caption{CIFAR images from the frog, car, and dog classes.}
+\caption{CIFAR images from the frog, car, and dog classes.\cite{kriz:2009}}
 \label{fig1}
 \end{figure}
 
@@ -282,7 +282,7 @@ For these experiments, training is stopped early if the training accuracy reache
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.5\columnwidth]{experiment-heavy-aug}
+\includegraphics[width=0.55\columnwidth]{experiment-heavy-aug}
 \caption{Training and validation loss under heavy augmentation}
 \label{fig4}
 \end{figure}
@@ -336,7 +336,7 @@ To test the effect of dropout, multiple dropout ``layers'' are inserted into the
 before and after the block sequence pipeline, and between each sequence in the block sequence pipeline.
 Three dropout configurations were evaluated and compared to a zero-dropout configuration.
 Among the dropout configurations, the input layer dropout rate was set at 20\%, while the hidden layer
-dropout layers were assigned rates of 0\%, 20\%, and 50\%.
+dropout layers were assigned rates of 0\%, 20\%, and 50\% (the latter being recommended by \cite{JMLR:v15:srivastava14a}).
 Models with dropout were trained up to 80 epochs, instead of the 40 epoch limit in above experiments,
 to account for how dropout may delay convergence.
 Early stopping was imposed at training accuracy of 97.5\%.
