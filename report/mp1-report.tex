@@ -151,7 +151,7 @@ This research focuses on designing, training, and evaluating a model with ResNet
 million parameters, aiming to achieve high accuracy on CIFAR-10.
 Using model definition and training code adapted from a reference implementation~\cite{kl:2021}, model
 hyperparameters and training strategies are determined through experimentation on a validation set.
-The final model produced from this process achieves accuracy of TBD on the CIFAR-10 test dataset.
+The final model produced from this process achieves accuracy of 92.1\% on the CIFAR-10 test dataset.
 
 \section{Methodology}
 
@@ -328,29 +328,29 @@ motivate us to pursue an alternative to the upstream default.
 Unlike the experiments on dropout and weight decay, investigation into regularization by
 intensifying data augmentation does show some promise.
 The default configuration, in which training data is augmented by random crop and random horizontal flip,
-was compared to configurations with no augmentation and with more intense augmentation,
+was compared to configurations with no augmentation and with heavier augmentation,
 adding random rotation of up to 30 degrees in either direction.
 The loss curves for each of these configurations are shown in Figure~\ref{fig4}
 As could be expected, the model trained with no augmentation performed worst,
 achieving 88.1\% validation accuracy, compared to 90.4\% accuracy from the default configuration.
-While the model with more intense augmentation achieved only 88.0\% accuracy, its
+While the model with heavier augmentation achieved only 88.0\% accuracy, its
 validation loss curve tracks its training loss curve very closely, implying that
 the model does not become overfitted to the training data in later epochs.
 
 This suggested a potential avenue for improvement: use the cosine annealing learning rate scheduler,
-which had previously been rejected for being prone to overfitting, paired with intense
+which had previously been rejected for being prone to overfitting, paired with heavy
 data augmentation, which mitigates overfitting.
 To explore this potential, two models were trained out to 80 epochs, a baseline model with the
 default augmentation and the adaptive plateau scheduler adopted above, and another with
-intense augmentation and a cosine annealing scheduler.
-The intense augmentation model achieved validation accuracy of 94.4\%, while the default
+heavy augmentation and a cosine annealing scheduler.
+The heavy augmentation model achieved validation accuracy of 94.4\%, while the default
 augmentation model achieved 94.2\%.
-However, as shown in Figure~\ref{fig5}, at epochs beyond 40, the intense augmentation
+However, as shown in Figure~\ref{fig5}, at epochs beyond 40, the heavy augmentation
 model divergence of the training and validation loss curves in the earlier experiment
 where it was trained only to 40 epochs.
-That divergence and the similar validation accuracy scores suggest that the intense augmentation
+That divergence and the similar validation accuracy scores suggest that the heavy augmentation
 method does not resolve overfitting problem.
-The close tracking of training and validation loss was likely due to the intense
+The close tracking of training and validation loss was likely due to the heavy
 augmentation inducing greater training loss than the default augmentation induces,
 while the same gradient characteristics were still present, so the models learned
 in the same way.
@@ -368,8 +368,6 @@ in the same way.
 \caption{Training and validation loss over 80 epochs with different augmentation and learning rate schedulers.}
 \label{fig5}
 \end{figure}
-
-
 
 \subsection{Hyperparameters}
 
@@ -389,12 +387,24 @@ the small dimensions of the CIFAR images.
 
 \section{Results}
 
-The analysis above suggests that the best choice of architecture, training strategy, and hyperparameters is the 2-2-2
-model with adaptive learning rate scheduler, weight decay 0.0005, 20\% input dropout and 50\% hidden dropout, and
-convolution kernel size 3.
-This model was trained to 80 epochs, with early stopping of training (at training accuracy 99.5\%).
-The checkpoint with the best validation accuracy was selected to be evaluated on the test data.
-On the CIFAR-10 test dataset, which contains 10k images, the model's accuracy is 94.0\%.
+The analysis above suggests that a suitable choice of architecture, training strategy, and hyperparameters
+is as follows:
+\begin{itemize}
+    \item 3-5-3 architecture
+    \item adaptive-plateau learning rate scheduler
+    \item SGD optimizer
+    \item weight decay $ 0.0005 $
+    \item random crop and random flip data augmentation
+    \item convolution kernel size $ 3 $
+\end{itemize}
+
+A model with these characteristics model was trained with epoch limit of 80, and
+training was stopped early when the training accuracy reached 97.5\% at epoch 56.
+Validation accuracy was measured at each epoch, and the model with weights corresponding to the best
+validation accuracy (92.8\%) was selected to be evaluated on the test data.
+
+On the CIFAR-10 test dataset, which contains 10k images, the model's accuracy is 92.1\%,
+comparable to the best validation accuracy.
 
 Most avenues of investigation ended with the choice to use parameters specified by the original ResNet researchers or
 the upstream codebase, or to use near equivalents.
